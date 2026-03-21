@@ -1,0 +1,132 @@
+const DEFAULT_PROVIDER = "adzuna";
+const MAX_RESULTS = 10;
+const { rankJobMatches } = require("./jobRanking");
+
+function getAdzunaCountry() {
+  return process.env.ADZUNA_COUNTRY || "us";
+}
+
+function normalizeQuery(desiredJobTitles, desiredJobTitleTags) {
+  const intentLabels = Array.isArray(desiredJobTitleTags)
+    ? desiredJobTitleTags.map((tag) => tag.label).filter(Boolean)
+    : [];
+
+  if (intentLabels.length) {
+    return intentLabels.slice(0, 3).join(" OR ");
+  }
+
+  return desiredJobTitles
+    .split(",")
+    .map((title) => title.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" OR ");
+}
+
+function toSnippet(description) {
+  const text = (description || "").replace(/\s+/g, " ").trim();
+
+  if (!text) {
+    return "Description not available from the job source.";
+  }
+
+  if (text.length <= 220) {
+    return text;
+  }
+
+  return `${text.slice(0, 217)}...`;
+}
+
+function mapAdzunaJob(job) {
+  return {
+    id: job.id || `${job.title || "job"}-${job.redirect_url || ""}`,
+    title: job.title || "Untitled role",
+    company: job.company?.display_name || "Company not listed",
+    location: job.location?.display_name || "Location not listed",
+    summary: toSnippet(job.description),
+    description: (job.description || "").replace(/\s+/g, " ").trim(),
+    applyUrl: job.redirect_url || "",
+    source: DEFAULT_PROVIDER,
+  };
+}
+
+async function searchAdzunaJobs({
+  desiredJobTitles,
+  desiredJobTitleTags,
+  location,
+  resumeText,
+}) {
+  const appId = process.env.ADZUNA_APP_ID;
+  const appKey = process.env.ADZUNA_APP_KEY;
+
+  if (!appId || !appKey) {
+    return {
+      provider: DEFAULT_PROVIDER,
+      status: "failed",
+      message:
+        "Live job search is not configured yet. Add your Adzuna API credentials to start fetching real jobs.",
+      matches: [],
+    };
+  }
+
+  const params = new URLSearchParams({
+    app_id: appId,
+    app_key: appKey,
+    results_per_page: String(MAX_RESULTS),
+    what: normalizeQuery(desiredJobTitles, desiredJobTitleTags),
+    where: location,
+    "content-type": "application/json",
+  });
+
+  const response = await fetch(
+    `https://api.adzuna.com/v1/api/jobs/${getAdzunaCountry()}/search/1?${params.toString()}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Jobs API request failed with status ${response.status}.`);
+  }
+
+  const payload = await response.json();
+  const results = Array.isArray(payload.results) ? payload.results : [];
+
+  return {
+    provider: DEFAULT_PROVIDER,
+    status: "success",
+    message: results.length ? "" : "No live job matches were found for this search yet.",
+    matches: rankJobMatches({
+      jobs: results.slice(0, MAX_RESULTS).map(mapAdzunaJob),
+      desiredJobTitles,
+      desiredJobTitleTags,
+      location,
+      resumeText,
+    }),
+  };
+}
+
+async function fetchRankedJobMatches({
+  desiredJobTitles,
+  desiredJobTitleTags,
+  location,
+  resumeText,
+}) {
+  try {
+    return await searchAdzunaJobs({
+      desiredJobTitles,
+      desiredJobTitleTags,
+      location,
+      resumeText,
+    });
+  } catch (_error) {
+    return {
+      provider: DEFAULT_PROVIDER,
+      status: "failed",
+      message:
+        "We could not load live job matches right now. Your submission was still saved successfully.",
+      matches: [],
+    };
+  }
+}
+
+module.exports = {
+  fetchRankedJobMatches,
+};

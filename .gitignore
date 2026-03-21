@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+
+# local environment
+.env
+.env*.local
+
+# local data and uploads
+data/*.json
+data/uploads/
+!data/.gitkeep
+
+# misc
+*.pem

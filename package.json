@@ -1,0 +1,16 @@
+{
+  "name": "get-me-hired-ai",
+  "version": "1.0.0",
+  "description": "Get Me Hired AI MVP for intake, saved profiles, ranked job matching, and recurring alert foundations",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^2.0.2"
+  },
+  "private": true
+}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Get Me Hired AI Results</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="card">
+        <div class="eyebrow">Get Me Hired AI</div>
+        <h1>Submission received.</h1>
+        <p class="intro">
+          Your intake details were saved locally for this V1 workflow.
+        </p>
+        <p class="profile-note">
+          This profile is now structured for future saved access and recurring job delivery.
+        </p>
+
+        <div id="results-card" class="success-state" hidden>
+          <h2>Your submitted details</h2>
+
+          <div class="results-list">
+            <div class="result-row">
+              <span class="result-label">Full name</span>
+              <p id="result-full-name" class="result-value"></p>
+            </div>
+
+            <div class="result-row">
+              <span class="result-label">Email</span>
+              <p id="result-email" class="result-value"></p>
+            </div>
+
+            <div class="result-row">
+              <span class="result-label">Desired job titles</span>
+              <p id="result-job-titles" class="result-value"></p>
+            </div>
+
+            <div class="result-row">
+              <span class="result-label">Location</span>
+              <p id="result-location" class="result-value"></p>
+            </div>
+
+            <div class="result-row">
+              <span class="result-label">Uploaded resume file name</span>
+              <p id="result-resume-name" class="result-value"></p>
+            </div>
+          </div>
+
+          <div class="matches-section">
+            <div class="section-heading">
+              <span class="result-label">Recurring alerts</span>
+              <h2>Saved Alert Settings</h2>
+            </div>
+
+            <div class="results-list">
+              <div class="result-row">
+                <span class="result-label">Frequency</span>
+                <p id="alert-frequency" class="result-value"></p>
+              </div>
+
+              <div class="result-row">
+                <span class="result-label">Remote only</span>
+                <p id="alert-remote-only" class="result-value"></p>
+              </div>
+
+              <div class="result-row">
+                <span class="result-label">Preferred job type</span>
+                <p id="alert-job-type" class="result-value"></p>
+              </div>
+
+              <div class="result-row">
+                <span class="result-label">Salary preference</span>
+                <p id="alert-salary" class="result-value"></p>
+              </div>
+            </div>
+
+            <p class="profile-note">
+              This recurring alert profile is ready for future scheduled scans and job alert
+              delivery.
+            </p>
+          </div>
+
+          <div class="matches-section">
+            <div class="section-heading">
+              <span class="result-label">Ranked results</span>
+              <h2>Ranked Job Matches</h2>
+            </div>
+
+            <p id="job-matches-status" class="matches-status" hidden></p>
+            <div id="job-matches-list" class="job-matches-list"></div>
+          </div>
+
+          <button type="button" class="secondary-button" onclick="window.location.href='/'">
+            Back to intake form
+          </button>
+        </div>
+
+        <p id="results-message" class="form-message" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="/success.js"></script>
+  </body>
+  </html>

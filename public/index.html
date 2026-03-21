@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Get Me Hired AI</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="onboarding-modal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="eyebrow">Get Me Hired AI</div>
+        <h2 id="modal-title">A quick note before you begin.</h2>
+        <p class="modal-copy">
+          Get Me Hired AI is built to help you find jobs that are reasonably aligned with your
+          real experience. Be honest about your background. It can help you find opportunities,
+          but you still need to interview well and prove you are a fit. Misrepresenting your
+          experience is counterproductive.
+        </p>
+        <button id="modal-continue" type="button">I understand</button>
+      </div>
+    </div>
+
+    <main class="page-shell">
+      <section class="card">
+        <div class="eyebrow">Get Me Hired AI</div>
+        <h1>Tell us about your next role.</h1>
+        <p class="intro">
+          Share your basics and resume so we can prepare your future job matches.
+        </p>
+
+        <form id="intake-form" class="intake-form" enctype="multipart/form-data">
+          <label class="field">
+            <span>Full name</span>
+            <input
+              type="text"
+              name="fullName"
+              autocomplete="name"
+              required
+              aria-describedby="form-message"
+            />
+          </label>
+
+          <label class="field">
+            <span>Email</span>
+            <input
+              type="email"
+              name="email"
+              autocomplete="email"
+              required
+              aria-describedby="form-message"
+            />
+          </label>
+
+          <label class="field">
+            <span>Desired job titles</span>
+            <textarea
+              name="desiredJobTitles"
+              rows="3"
+              placeholder="Product Designer, UX Researcher, Design Systems Lead"
+              required
+              aria-describedby="form-message"
+            ></textarea>
+          </label>
+
+          <label class="field">
+            <span>Location</span>
+            <input
+              type="text"
+              name="location"
+              placeholder="San Francisco, CA or Remote"
+              required
+              aria-describedby="form-message"
+            />
+          </label>
+
+          <div class="settings-grid">
+            <label class="field">
+              <span>Alert frequency</span>
+              <select name="alertFrequency" aria-describedby="form-message">
+                <option value="daily">Daily</option>
+                <option value="every-3-days">Every 3 days</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </label>
+
+            <label class="field checkbox-field">
+              <span>Remote only</span>
+              <input type="checkbox" name="remoteOnly" />
+            </label>
+          </div>
+
+          <div class="settings-grid">
+            <label class="field">
+              <span>Preferred job type</span>
+              <select name="preferredJobType" aria-describedby="form-message">
+                <option value="full-time">Full-time</option>
+                <option value="part-time">Part-time</option>
+                <option value="contract">Contract</option>
+                <option value="internship">Internship</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Salary preference</span>
+              <input
+                type="text"
+                name="salaryPreference"
+                placeholder="$120k+ or $60/hr"
+                aria-describedby="form-message"
+              />
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Resume upload</span>
+            <input
+              type="file"
+              name="resume"
+              accept=".pdf,.doc,.docx,.txt"
+              required
+              aria-describedby="form-message"
+            />
+            <small>PDF, DOC, DOCX, or TXT up to 10MB</small>
+          </label>
+
+          <label class="field">
+            <span>Pasted resume text (recommended fallback)</span>
+            <textarea
+              name="resumeText"
+              rows="6"
+              placeholder="Paste plain text from your resume here to improve fit ranking if your uploaded file is hard to parse."
+              aria-describedby="form-message"
+            ></textarea>
+            <small>Optional, but helps the ranking use your resume keywords right away.</small>
+          </label>
+
+          <p class="trust-note">
+            These alert settings are saved with your profile so future recurring job scans and
+            delivery can plug in cleanly.
+          </p>
+
+          <button id="submit-button" type="submit">Submit profile</button>
+        </form>
+
+        <p id="form-message" class="form-message" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>
