@@ -2,11 +2,7 @@
   "version": 2,
   "functions": {
     "server.js": {
-      "includeFiles": [
-        "public/**",
-        "data/**",
-        "src/**"
-      ]
+      "includeFiles": "public/**"
     }
   },
   "routes": [
