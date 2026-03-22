@@ -43,8 +43,59 @@ textarea {
   min-height: 100vh;
   padding: 24px 16px 48px;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 18px;
+}
+
+.site-nav {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(39, 34, 24, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 28px rgba(58, 47, 31, 0.08);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.site-brand {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.site-nav-links a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.site-nav-links a:hover,
+.site-nav-links a:focus-visible,
+.site-nav-links a[aria-current="page"] {
+  background: rgba(47, 106, 86, 0.1);
+  color: var(--accent-strong);
 }
 
 .modal-overlay {
@@ -119,6 +170,30 @@ h1 {
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.6;
+}
+
+.home-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.home-links a {
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(47, 106, 86, 0.08);
+  color: var(--accent-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.home-links a:hover,
+.home-links a:focus-visible {
+  background: rgba(47, 106, 86, 0.14);
+  transform: translateY(-1px);
 }
 
 .trust-note,
@@ -432,5 +507,17 @@ button:disabled {
 
   .settings-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 639px) {
+  .site-nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .site-nav-links {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
