@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "functions": {
+    "server.js": {
+      "includeFiles": [
+        "public/**",
+        "data/**",
+        "src/**"
+      ]
+    }
+  },
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/submit",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/submission/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/success",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
+    }
+  ]
+}

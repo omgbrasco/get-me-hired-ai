@@ -287,7 +287,7 @@
           <div class="empty-state">
             <div class="empty-icon">🔍</div>
             <h3>No results found</h3>
-            <p>Try a broader job title or a different location.<br>For example, "Engineer" instead of a specific niche role.</p>
+            <p id="empty-message">Try a broader job title or a different location.<br>For example, "Engineer" instead of a specific niche role.</p>
           </div>
         </div>
 
@@ -314,6 +314,7 @@
       const stError   = document.getElementById("state-error");
       const stResults = document.getElementById("state-results");
       const errMsg    = document.getElementById("error-message");
+      const emptyMsg  = document.getElementById("empty-message");
       const summary   = document.getElementById("results-summary");
       const grid      = document.getElementById("results-grid");
 
@@ -343,6 +344,9 @@
           const matches = (data.results?.matches || []).slice(0, 10);
 
           if (!matches.length) {
+            emptyMsg.innerHTML = data.results?.message
+              ? escapeHtml(data.results.message)
+              : 'Try a broader job title or a different location.<br>For example, "Engineer" instead of a specific niche role.';
             showOnly(stEmpty);
           } else {
             const n = matches.length;

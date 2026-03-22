@@ -50,6 +50,7 @@ const uploadsDir = path.join(dataDir, "uploads");
 const submissionsPath = path.join(dataDir, "submissions.json");
 const profilesPath = path.join(dataDir, "profiles.json");
 const waitlistPath = path.join(dataDir, "waitlist.json");
+const publicDir = path.join(__dirname, "public");
 
 const ALERT_FREQUENCY_DAYS = {
   daily: 1,
@@ -114,7 +115,15 @@ const upload = multer({
   },
 });
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(publicDir));
+
+function sendPublicFile(res, fileName) {
+  return res.sendFile(path.join(publicDir, fileName), (error) => {
+    if (error && !res.headersSent) {
+      res.status(error.statusCode || 404).end();
+    }
+  });
+}
 
 function readSubmissions() {
   try {
@@ -325,7 +334,49 @@ app.get("/submission/:id", (req, res) => {
   });
 });
 
-app.post("/api/waitlist", express.json(), (req, res) => {
+// Save a waitlist entry. Uses Airtable when configured, falls back to local JSON.
+async function saveWaitlistEntry({ name, email, tier, note }) {
+  const airtableKey  = process.env.AIRTABLE_API_KEY;
+  const airtableBase = process.env.AIRTABLE_BASE_ID;
+  const airtableTable = process.env.AIRTABLE_TABLE_NAME || "Waitlist";
+
+  if (airtableKey && airtableBase) {
+    const url = `https://api.airtable.com/v0/${airtableBase}/${encodeURIComponent(airtableTable)}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${airtableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        records: [{
+          fields: {
+            Name: name,
+            Email: email,
+            Tier: tier,
+            Note: note,
+            "Submitted At": new Date().toISOString(),
+          },
+        }],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Airtable error ${response.status}: ${err}`);
+    }
+
+    return { storage: "airtable" };
+  }
+
+  // Fallback: local JSON (local dev only — ephemeral on Render free tier)
+  const entries = JSON.parse(fs.readFileSync(waitlistPath, "utf8"));
+  entries.push({ name, email, tier, note, createdAt: new Date().toISOString() });
+  fs.writeFileSync(waitlistPath, JSON.stringify(entries, null, 2), "utf8");
+  return { storage: "local" };
+}
+
+app.post("/api/waitlist", express.json(), async (req, res) => {
   try {
     const name  = (req.body.name  || "").trim();
     const email = (req.body.email || "").trim();
@@ -345,10 +396,7 @@ app.post("/api/waitlist", express.json(), (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid tier." });
     }
 
-    const entries = JSON.parse(fs.readFileSync(waitlistPath, "utf8"));
-    entries.push({ name, email, tier, note, createdAt: new Date().toISOString() });
-    fs.writeFileSync(waitlistPath, JSON.stringify(entries, null, 2), "utf8");
-
+    await saveWaitlistEntry({ name, email, tier, note });
     return res.json({ success: true, message: "You're on the list." });
   } catch (_err) {
     return res.status(500).json({ success: false, message: "Could not save your entry. Please try again." });
@@ -375,6 +423,14 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     }
 
     const results = await searchJobsQuick({ jobTitle, location });
+
+    if (results.status === "failed") {
+      return res.status(503).json({
+        success: false,
+        message: results.message || "Search is unavailable right now. Please try again.",
+      });
+    }
+
     return res.json({ success: true, results });
   } catch (_err) {
     return res.status(500).json({
@@ -384,8 +440,32 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
   }
 });
 
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+app.get("/", (_req, res) => {
+  sendPublicFile(res, "index.html");
+});
+
+app.get("/robots.txt", (_req, res) => {
+  sendPublicFile(res, "robots.txt");
+});
+
+app.get("/favicon.ico", (_req, res) => {
+  sendPublicFile(res, "favicon.ico");
+});
+
+app.get("/apple-touch-icon.png", (_req, res) => {
+  sendPublicFile(res, "apple-touch-icon.png");
+});
+
+app.get("/apple-touch-icon-precomposed.png", (_req, res) => {
+  sendPublicFile(res, "apple-touch-icon-precomposed.png");
+});
+
 app.get("/success", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "success.html"));
+  sendPublicFile(res, "success.html");
 });
 
 if (require.main === module) {

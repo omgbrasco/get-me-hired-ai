@@ -66,7 +66,6 @@ PORT=3000
 From the project root:
 
 ```bash
-cd /Users/bscobambam/Desktop/get-me-hired-ai
 npm start
 ```
 
@@ -80,28 +79,21 @@ You should see startup output like:
 Get Me Hired AI running at http://localhost:3000
 ```
 
-Open:
-
-```text
-http://localhost:3000
-```
+Open `http://localhost:3000` in your browser.
 
 Optional development mode with file watching:
 
 ```bash
-cd /Users/bscobambam/Desktop/get-me-hired-ai
 npm run dev
 ```
 
 ## If The App Looks Broken
 
-If the page is blank, stale, or not reflecting the latest code on macOS, restart the local server cleanly with:
+If the page is blank or stale, restart the server cleanly:
 
 ```bash
-kill $(lsof -ti tcp:3000) 2>/dev/null; cd /Users/bscobambam/Desktop/get-me-hired-ai && npm start
+kill $(lsof -ti tcp:3000) 2>/dev/null; npm start
 ```
-
-If nothing is running on port `3000`, that command will still safely continue to `npm start`.
 
 ## Local Data Storage
 
@@ -109,16 +101,94 @@ If nothing is running on port `3000`, that command will still safely continue to
 - Legacy prototype data: `data/submissions.json`
 - Uploaded resumes: `data/uploads/`
 
-## Deployment Notes
+## Deploy
 
-This app is ready for basic Node hosting on services like Render:
+### Recommended host
 
-- Build command: none required
-- Start command: `npm start`
-- Runtime: Node
-- Required env vars: `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, optional `ADZUNA_COUNTRY`, optional `PORT`
+Use **Render** for this MVP.
 
-For production hosting, use persistent disk or replace local JSON/file storage with hosted storage.
+This app is **not a good Vercel target in its current form** because it is an Express server that writes uploads and JSON data to the local filesystem. Vercel's serverless runtime is not a good fit for that storage model. Render is a better match because it runs the app as a long-lived Node web service.
+
+### Exact Render steps
+
+1. Push this repo to GitHub.
+2. In Render, create a new **Web Service** from the GitHub repo.
+3. Render will detect the included [render.yaml](/Users/bscobambam/Desktop/get-me-hired-ai/render.yaml), or you can set the values manually:
+   - Runtime: `Node`
+   - Build command: `npm install`
+   - Start command: `npm start`
+   - Health check path: `/health`
+4. Add these environment variables in Render:
+
+| Variable | Required | Notes |
+|---|---|---|
+| `ADZUNA_APP_ID` | ✅ Required | Needed for live job search |
+| `ADZUNA_APP_KEY` | ✅ Required | Needed for live job search |
+| `ADZUNA_COUNTRY` | Optional | Defaults to `us` |
+| `AIRTABLE_API_KEY` | Optional | Recommended if you want waitlist entries to persist cleanly |
+| `AIRTABLE_BASE_ID` | Optional | Required if using Airtable waitlist storage |
+| `AIRTABLE_TABLE_NAME` | Optional | Defaults to `Waitlist` |
+
+Do not set `PORT` manually on Render. Render injects it automatically and the app already reads it from `process.env.PORT`.
+
+### What to expect after deploy
+
+- `/health` should return `{"status":"ok"}`
+- `/waitlist.html` should submit successfully
+- `/search.html` should either show live results or a clear error message if Adzuna is unavailable
+
+### Storage warning
+
+Without a persistent disk or external database, these local files are ephemeral on Render and can reset on deploy or restart:
+
+- `data/profiles.json`
+- `data/waitlist.json`
+- `data/uploads/`
+
+For public testing, that is usually fine. For anything beyond that, attach a Render Disk or move profiles/uploads into hosted storage.
+
+## Waitlist Storage (Airtable)
+
+By default, waitlist entries are saved to `data/waitlist.json` locally. For production, the app writes to Airtable instead — no extra npm packages required.
+
+### Setup (takes about 5 minutes)
+
+**1. Create a free Airtable account**
+
+Go to [airtable.com](https://airtable.com) and sign up.
+
+**2. Create a new Base**
+
+Name it anything — e.g. "Get Me Hired AI". Inside it, create a table named `Waitlist` with these fields:
+
+| Field name | Field type |
+|---|---|
+| Name | Single line text |
+| Email | Email |
+| Tier | Single line text |
+| Note | Long text |
+| Submitted At | Single line text |
+
+**3. Get your credentials**
+
+- **API key**: Go to [airtable.com/create/tokens](https://airtable.com/create/tokens) → create a personal access token with `data.records:write` scope for your base.
+- **Base ID**: Open your base in the browser — the URL is `https://airtable.com/appXXXXXXXX/...`. The `appXXXXXXXX` part is your Base ID.
+
+**4. Add to your environment**
+
+Locally in `.env`, or in Render under Environment:
+
+```bash
+AIRTABLE_API_KEY=your_personal_access_token
+AIRTABLE_BASE_ID=appXXXXXXXX
+AIRTABLE_TABLE_NAME=Waitlist
+```
+
+`AIRTABLE_TABLE_NAME` defaults to `Waitlist` if not set.
+
+**How it works**
+
+If the Airtable env vars are present, entries go to Airtable. If they are not set, the app falls back to local `data/waitlist.json` automatically — so local development works without any setup.
 
 ## Current Roadmap
 
