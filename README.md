@@ -63,16 +63,21 @@ PORT=3000
 
 ## Run Locally
 
-Production-style start:
+From the project root:
 
 ```bash
+cd /Users/bscobambam/Desktop/get-me-hired-ai
 npm start
 ```
 
-Local development with file watching:
+You should see startup output like:
 
-```bash
-npm run dev
+```text
+[startup] Get Me Hired AI
+[startup] ADZUNA_APP_ID exists: yes
+[startup] ADZUNA_APP_KEY exists: yes
+[startup] ADZUNA_COUNTRY value: us
+Get Me Hired AI running at http://localhost:3000
 ```
 
 Open:
@@ -80,6 +85,23 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+Optional development mode with file watching:
+
+```bash
+cd /Users/bscobambam/Desktop/get-me-hired-ai
+npm run dev
+```
+
+## If The App Looks Broken
+
+If the page is blank, stale, or not reflecting the latest code on macOS, restart the local server cleanly with:
+
+```bash
+kill $(lsof -ti tcp:3000) 2>/dev/null; cd /Users/bscobambam/Desktop/get-me-hired-ai && npm start
+```
+
+If nothing is running on port `3000`, that command will still safely continue to `npm start`.
 
 ## Local Data Storage
 
@@ -105,4 +127,3 @@ For production hosting, use persistent disk or replace local JSON/file storage w
 - Add better resume parsing for PDF and DOCX uploads
 - Add public account access to saved profiles and search history
 - Add hosted storage instead of local JSON/files
-
