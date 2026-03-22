@@ -30,6 +30,13 @@ const SENIORITY_LEVELS = [
   { label: "junior", keywords: ["associate", "coordinator", "assistant", "junior", "jr", "entry"], score: 1 },
 ];
 
+const WORK_PREFERENCE_KEYWORDS = {
+  "full-time": ["full time", "full-time", "permanent"],
+  "part-time": ["part time", "part-time"],
+  remote: ["remote", "work from home", "distributed"],
+  freelance: ["freelance", "contract", "independent contractor"],
+};
+
 function tokenize(value) {
   return (value || "")
     .toLowerCase()
@@ -105,6 +112,29 @@ function scoreLocationRelevance(jobLocation, desiredLocation) {
   return overlap ? Math.max(0.45, overlap) : 0.2;
 }
 
+function scoreWorkPreferenceRelevance(job, workPreferences) {
+  if (!Array.isArray(workPreferences) || !workPreferences.length) {
+    return 0.55;
+  }
+
+  const haystack = `${job.title} ${job.location} ${job.description}`.toLowerCase();
+  let matchedPreferences = 0;
+
+  workPreferences.forEach((preference) => {
+    const keywords = WORK_PREFERENCE_KEYWORDS[preference] || [];
+    if (keywords.some((keyword) => haystack.includes(keyword))) {
+      matchedPreferences += 1;
+      return;
+    }
+
+    if (preference === "remote" && !haystack.includes("remote")) {
+      matchedPreferences -= 0.35;
+    }
+  });
+
+  return Math.max(0.1, Math.min(1, matchedPreferences / workPreferences.length || 0.35));
+}
+
 function inferSeniority(text) {
   const lowerText = (text || "").toLowerCase();
 
@@ -154,11 +184,13 @@ function scoreSeniorityRealism(job, resumeText) {
 function buildWhyItMatches({
   titleScore,
   locationScore,
+  workPreferenceScore,
   resumeOverlapScore,
   descriptionOverlapScore,
   seniorityScore,
   desiredTitles,
   location,
+  workPreferences,
 }) {
   const reasons = [];
 
@@ -168,6 +200,10 @@ function buildWhyItMatches({
 
   if (locationScore >= 0.7 && location) {
     reasons.push(`location lines up with ${location}`);
+  }
+
+  if (workPreferenceScore >= 0.7 && Array.isArray(workPreferences) && workPreferences.length) {
+    reasons.push("work preferences line up well");
   }
 
   if (resumeOverlapScore >= 0.35) {
@@ -185,7 +221,14 @@ function buildWhyItMatches({
   return reasons.slice(0, 2).join(" and ") || "reasonable overall fit based on your targets and resume.";
 }
 
-function rankJobMatches({ jobs, desiredJobTitles, desiredJobTitleTags, location, resumeText }) {
+function rankJobMatches({
+  jobs,
+  desiredJobTitles,
+  desiredJobTitleTags,
+  location,
+  resumeText,
+  workPreferences,
+}) {
   const desiredTitles = parseDesiredTitles(desiredJobTitles, desiredJobTitleTags);
   const resumeSource = resumeText || "";
 
@@ -193,6 +236,7 @@ function rankJobMatches({ jobs, desiredJobTitles, desiredJobTitleTags, location,
     .map((job) => {
       const titleScore = scoreTitleRelevance(job, desiredTitles);
       const locationScore = scoreLocationRelevance(job.location, location);
+      const workPreferenceScore = scoreWorkPreferenceRelevance(job, workPreferences);
       const resumeOverlapScore = keywordOverlap(resumeSource, `${job.title} ${job.description}`);
       const descriptionOverlapScore = keywordOverlap(
         `${desiredJobTitles} ${resumeSource}`,
@@ -202,10 +246,11 @@ function rankJobMatches({ jobs, desiredJobTitles, desiredJobTitleTags, location,
 
       const fitScore = Math.round(
         (titleScore * 0.3 +
-          locationScore * 0.18 +
+          locationScore * 0.16 +
+          workPreferenceScore * 0.1 +
           resumeOverlapScore * 0.22 +
-          descriptionOverlapScore * 0.12 +
-          seniorityScore * 0.18) *
+          descriptionOverlapScore * 0.1 +
+          seniorityScore * 0.12) *
           100
       );
 
@@ -215,11 +260,13 @@ function rankJobMatches({ jobs, desiredJobTitles, desiredJobTitleTags, location,
         whyItMatches: buildWhyItMatches({
           titleScore,
           locationScore,
+          workPreferenceScore,
           resumeOverlapScore,
           descriptionOverlapScore,
           seniorityScore,
           desiredTitles,
           location,
+          workPreferences,
         }),
       };
     })

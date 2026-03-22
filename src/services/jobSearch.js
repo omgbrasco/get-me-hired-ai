@@ -37,12 +37,25 @@ function toSnippet(description) {
   return `${text.slice(0, 217)}...`;
 }
 
+function formatSalary(min, max) {
+  const fmt = (n) =>
+    Number.isFinite(n) && n > 0
+      ? "$" + Math.round(n).toLocaleString("en-US")
+      : null;
+  const lo = fmt(min);
+  const hi = fmt(max);
+  if (lo && hi && lo !== hi) return `${lo} – ${hi}`;
+  if (lo || hi) return lo || hi;
+  return null;
+}
+
 function mapAdzunaJob(job) {
   return {
     id: job.id || `${job.title || "job"}-${job.redirect_url || ""}`,
     title: job.title || "Untitled role",
     company: job.company?.display_name || "Company not listed",
     location: job.location?.display_name || "Location not listed",
+    salary: formatSalary(job.salary_min, job.salary_max),
     summary: toSnippet(job.description),
     description: (job.description || "").replace(/\s+/g, " ").trim(),
     applyUrl: job.redirect_url || "",
@@ -55,6 +68,7 @@ async function searchAdzunaJobs({
   desiredJobTitleTags,
   location,
   resumeText,
+  workPreferences,
 }) {
   const appId = process.env.ADZUNA_APP_ID;
   const appKey = process.env.ADZUNA_APP_KEY;
@@ -99,6 +113,7 @@ async function searchAdzunaJobs({
       desiredJobTitleTags,
       location,
       resumeText,
+      workPreferences,
     }),
   };
 }
@@ -108,6 +123,7 @@ async function fetchRankedJobMatches({
   desiredJobTitleTags,
   location,
   resumeText,
+  workPreferences,
 }) {
   try {
     return await searchAdzunaJobs({
@@ -115,6 +131,7 @@ async function fetchRankedJobMatches({
       desiredJobTitleTags,
       location,
       resumeText,
+      workPreferences,
     });
   } catch (_error) {
     return {
@@ -127,6 +144,26 @@ async function fetchRankedJobMatches({
   }
 }
 
+async function searchJobsQuick({ jobTitle, location }) {
+  try {
+    return await searchAdzunaJobs({
+      desiredJobTitles: jobTitle,
+      desiredJobTitleTags: [],
+      location,
+      resumeText: "",
+      workPreferences: [],
+    });
+  } catch (_error) {
+    return {
+      provider: DEFAULT_PROVIDER,
+      status: "failed",
+      message: "Could not load job results right now. Please try again.",
+      matches: [],
+    };
+  }
+}
+
 module.exports = {
   fetchRankedJobMatches,
+  searchJobsQuick,
 };

@@ -36,12 +36,21 @@ function validateForm(formData) {
 
 function closeOnboardingModal() {
   onboardingModal.hidden = true;
-  window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+  try {
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+  } catch (_e) {
+    // localStorage blocked in this context — dismiss state won't persist
+  }
 }
 
 function showOnboardingModalIfNeeded() {
-  const alreadyDismissed = window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === "true";
-  onboardingModal.hidden = alreadyDismissed;
+  try {
+    const alreadyDismissed = window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === "true";
+    onboardingModal.hidden = alreadyDismissed;
+  } catch (_e) {
+    // localStorage blocked — default to showing the modal once
+    onboardingModal.hidden = false;
+  }
 }
 
 modalContinueButton.addEventListener("click", closeOnboardingModal);

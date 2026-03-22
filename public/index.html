@@ -84,23 +84,6 @@
               </select>
             </label>
 
-            <label class="field checkbox-field">
-              <span>Remote only</span>
-              <input type="checkbox" name="remoteOnly" />
-            </label>
-          </div>
-
-          <div class="settings-grid">
-            <label class="field">
-              <span>Preferred job type</span>
-              <select name="preferredJobType" aria-describedby="form-message">
-                <option value="full-time">Full-time</option>
-                <option value="part-time">Part-time</option>
-                <option value="contract">Contract</option>
-                <option value="internship">Internship</option>
-              </select>
-            </label>
-
             <label class="field">
               <span>Salary preference</span>
               <input
@@ -111,6 +94,31 @@
               />
             </label>
           </div>
+
+          <fieldset class="field preference-group">
+            <legend>Work preferences</legend>
+            <div class="preference-options">
+              <label class="preference-option">
+                <input type="checkbox" name="workPreferences" value="full-time" />
+                <span>Full-time</span>
+              </label>
+
+              <label class="preference-option">
+                <input type="checkbox" name="workPreferences" value="part-time" />
+                <span>Part-time</span>
+              </label>
+
+              <label class="preference-option">
+                <input type="checkbox" name="workPreferences" value="remote" />
+                <span>Remote</span>
+              </label>
+
+              <label class="preference-option">
+                <input type="checkbox" name="workPreferences" value="freelance" />
+                <span>Freelance</span>
+              </label>
+            </div>
+          </fieldset>
 
           <label class="field">
             <span>Resume upload</span>

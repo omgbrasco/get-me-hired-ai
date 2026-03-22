@@ -15,11 +15,17 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: var(--text);
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.8), transparent 32%),
     linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
@@ -33,10 +39,11 @@ textarea {
 }
 
 .page-shell {
+  width: 100%;
   min-height: 100vh;
   padding: 24px 16px 48px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
@@ -49,7 +56,12 @@ textarea {
   justify-content: center;
   padding: 24px 16px;
   background: rgba(24, 20, 15, 0.42);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+}
+
+.modal-overlay[hidden] {
+  display: none;
 }
 
 .modal-card {
@@ -71,11 +83,13 @@ textarea {
 .card {
   width: 100%;
   max-width: 560px;
+  margin: 0 auto;
   padding: 28px 20px;
   border: 1px solid var(--panel-border);
   border-radius: 24px;
   background: var(--panel);
   box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }
 
@@ -148,15 +162,44 @@ h1 {
   gap: 16px;
 }
 
-.checkbox-field {
-  align-content: end;
+.preference-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.checkbox-field input {
-  width: 20px;
-  height: 20px;
+.preference-group legend {
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.preference-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.preference-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(49, 41, 30, 0.14);
+  border-radius: 16px;
+  background: var(--input);
+}
+
+.preference-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
   padding: 0;
   box-shadow: none;
+}
+
+.preference-option span {
+  font-weight: 500;
 }
 
 input,
@@ -317,10 +360,23 @@ button:disabled {
   flex-shrink: 0;
   padding: 9px 12px;
   border-radius: 999px;
-  background: rgba(47, 106, 86, 0.12);
-  color: var(--accent-strong);
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+.match-score-high {
+  background: rgba(47, 106, 86, 0.16);
+  color: #1f5b46;
+}
+
+.match-score-medium {
+  background: rgba(185, 123, 26, 0.16);
+  color: #8a5a10;
+}
+
+.match-score-low {
+  background: rgba(177, 72, 59, 0.14);
+  color: #9f362a;
 }
 
 .match-location {

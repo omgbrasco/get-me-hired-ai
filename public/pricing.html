@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pricing — Get Me Hired AI</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .pricing-shell {
+        width: 100%;
+        min-height: 100vh;
+        padding: 48px 16px 64px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .pricing-header {
+        text-align: center;
+        max-width: 480px;
+        margin-bottom: 40px;
+      }
+
+      .pricing-header h1 {
+        font-size: clamp(2rem, 8vw, 3rem);
+        letter-spacing: -0.04em;
+        line-height: 0.96;
+        margin-bottom: 14px;
+      }
+
+      .pricing-header p {
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.6;
+      }
+
+      /* Grid */
+      .pricing-grid {
+        display: grid;
+        gap: 16px;
+        width: 100%;
+        max-width: 900px;
+      }
+
+      @media (min-width: 680px) {
+        .pricing-grid {
+          grid-template-columns: repeat(3, 1fr);
+          align-items: start;
+        }
+      }
+
+      /* Tier card */
+      .tier-card {
+        border-radius: 24px;
+        padding: 28px 24px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .tier-card.featured {
+        background: var(--accent);
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 0 0 3px var(--accent), var(--shadow);
+      }
+
+      .tier-badge {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+        align-self: flex-start;
+      }
+
+      /* Tier name & price */
+      .tier-top {}
+
+      .tier-name {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+
+      .tier-card.featured .tier-name {
+        color: #fff;
+      }
+
+      .tier-price {
+        font-size: 2.4rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        margin: 0;
+        color: var(--text);
+      }
+
+      .tier-card.featured .tier-price {
+        color: #fff;
+      }
+
+      .tier-price span {
+        font-size: 1rem;
+        font-weight: 500;
+        letter-spacing: 0;
+        opacity: 0.7;
+      }
+
+      .tier-description {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.45;
+        margin: 8px 0 0;
+      }
+
+      .tier-card.featured .tier-description {
+        color: rgba(255, 255, 255, 0.92);
+      }
+
+      /* Feature list */
+      .tier-features {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .tier-features li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        color: var(--text);
+      }
+
+      .tier-card.featured .tier-features li {
+        color: rgba(255, 255, 255, 0.92);
+      }
+
+      .feat-icon {
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(47, 106, 86, 0.14);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        color: var(--accent);
+        margin-top: 1px;
+      }
+
+      .tier-card.featured .feat-icon {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+
+      /* CTA button */
+      .tier-cta {
+        display: block;
+        text-align: center;
+        padding: 13px 18px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+        border: none;
+      }
+
+      .tier-cta:hover {
+        transform: translateY(-1px);
+        opacity: 0.92;
+      }
+
+      .cta-outline {
+        background: rgba(47, 106, 86, 0.1);
+        color: var(--accent-strong);
+      }
+
+      .cta-solid {
+        background: #fff;
+        color: var(--accent-strong);
+      }
+
+      /* Divider between tiers */
+      .tier-divider {
+        height: 1px;
+        background: var(--panel-border);
+      }
+
+      .tier-card.featured .tier-divider {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* Back link */
+      .back-link {
+        margin-top: 36px;
+        font-size: 0.88rem;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .back-link:hover {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="pricing-shell">
+      <div class="pricing-header">
+        <div class="eyebrow">Get Me Hired AI</div>
+        <h1>Simple pricing.</h1>
+        <p>Start free, upgrade when you need more firepower.</p>
+      </div>
+
+      <div class="pricing-grid">
+
+        <!-- Free -->
+        <div class="tier-card">
+          <div class="tier-top">
+            <p class="tier-name">Free</p>
+            <p class="tier-price">$0 <span>/ month</span></p>
+            <p class="tier-description">Find real jobs matched to your resume — today.</p>
+          </div>
+          <div class="tier-divider"></div>
+          <ul class="tier-features">
+            <li>
+              <span class="feat-icon">✓</span>
+              Resume-based job matches
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              Daily job email digest
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              Manual apply links
+            </li>
+          </ul>
+          <a href="/" class="tier-cta cta-outline">Start Free</a>
+        </div>
+
+        <!-- Pro (featured) -->
+        <div class="tier-card featured">
+          <div class="tier-badge">Most popular</div>
+          <div class="tier-top">
+            <p class="tier-name">Pro</p>
+            <p class="tier-price">$19 <span>/ month</span></p>
+            <p class="tier-description">Get more callbacks with materials built for each role.</p>
+          </div>
+          <div class="tier-divider"></div>
+          <ul class="tier-features">
+            <li>
+              <span class="feat-icon">✓</span>
+              Everything in Free
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              Resume tailoring per role
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              AI-generated cover letters
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              Keyword optimization
+            </li>
+          </ul>
+          <a href="/waitlist.html?tier=pro" class="tier-cta cta-solid">Upgrade to Pro</a>
+        </div>
+
+        <!-- Premium -->
+        <div class="tier-card">
+          <div class="tier-top">
+            <p class="tier-name">Premium</p>
+            <p class="tier-price">$49 <span>/ month</span></p>
+            <p class="tier-description">Apply to more jobs in less time — on autopilot.</p>
+          </div>
+          <div class="tier-divider"></div>
+          <ul class="tier-features">
+            <li>
+              <span class="feat-icon">✓</span>
+              Everything in Pro
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              Auto-apply workflows
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              Application tracking
+            </li>
+            <li>
+              <span class="feat-icon">✓</span>
+              Saved profiles &amp; history
+            </li>
+          </ul>
+          <a href="/waitlist.html?tier=premium" class="tier-cta cta-outline">Go Premium</a>
+        </div>
+
+      </div>
+
+      <a href="/" class="back-link">← Back to Get Me Hired AI</a>
+    </main>
+  </body>
+</html>

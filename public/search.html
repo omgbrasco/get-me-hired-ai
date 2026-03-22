@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Search — Get Me Hired AI</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* ── Form ── */
+      .search-form {
+        display: grid;
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      .search-row {
+        display: grid;
+        gap: 14px;
+      }
+
+      @media (min-width: 480px) {
+        .search-row { grid-template-columns: 1fr 1fr; }
+      }
+
+      #search-btn {
+        background: var(--accent);
+        color: #fff;
+        margin-top: 4px;
+        width: 100%;
+      }
+
+      /* ── States ── */
+      .state-area { margin-top: 28px; }
+      .state-area[hidden] { display: none; }
+
+      /* Loading skeletons */
+      .skeleton-list { display: grid; gap: 12px; }
+
+      .skeleton-card {
+        padding: 18px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.72);
+        border: 1px solid rgba(49,41,30,0.09);
+        display: grid;
+        gap: 10px;
+      }
+
+      .skeleton-line {
+        border-radius: 6px;
+        height: 13px;
+        background: linear-gradient(
+          90deg,
+          rgba(49,41,30,0.07) 25%,
+          rgba(49,41,30,0.13) 50%,
+          rgba(49,41,30,0.07) 75%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.4s infinite;
+      }
+      .skeleton-line.title  { height: 17px; width: 70%; }
+      .skeleton-line.short  { width: 38%; }
+      .skeleton-line.medium { width: 58%; }
+      .skeleton-line.long   { width: 88%; }
+      .skeleton-line.full   { width: 100%; }
+
+      @keyframes shimmer {
+        0%   { background-position:  200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      /* Empty state */
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.5);
+        border: 1px solid rgba(49,41,30,0.08);
+      }
+      .empty-icon { font-size: 2.2rem; line-height: 1; margin-bottom: 12px; }
+      .empty-state h3 { margin: 0 0 8px; font-size: 1.05rem; color: var(--text); }
+      .empty-state p  { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+      /* Error state */
+      .error-state {
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: rgba(161,63,45,0.07);
+        border: 1px solid rgba(161,63,45,0.18);
+        color: #a13f2d;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      /* Results header */
+      .results-header {
+        margin-bottom: 16px;
+      }
+      .results-summary {
+        font-size: 0.88rem;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .results-summary strong {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      /* Job cards */
+      .results-grid { display: grid; gap: 10px; }
+
+      .job-card {
+        padding: 18px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.72);
+        border: 1px solid rgba(49,41,30,0.09);
+        display: grid;
+        gap: 0;
+        transition: box-shadow 140ms ease, transform 140ms ease;
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .job-card:hover {
+        box-shadow: 0 6px 24px rgba(58,47,31,0.11);
+        transform: translateY(-1px);
+      }
+
+      .job-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .job-title {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.3;
+        color: var(--text);
+        margin: 0;
+      }
+
+      .job-company {
+        margin: 3px 0 0;
+        font-size: 0.875rem;
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .job-salary {
+        flex-shrink: 0;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #1f5b46;
+        background: rgba(47,106,86,0.12);
+        border-radius: 999px;
+        padding: 5px 11px;
+        white-space: nowrap;
+        align-self: flex-start;
+      }
+
+      .job-location {
+        margin: 10px 0 0;
+        font-size: 0.84rem;
+        color: var(--accent-strong);
+        font-weight: 500;
+      }
+
+      .job-summary {
+        margin: 8px 0 0;
+        font-size: 0.875rem;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .job-cta {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(49,41,30,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .job-cta-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 9px 16px;
+        border-radius: 999px;
+        text-decoration: none;
+        transition: background 140ms ease, transform 140ms ease;
+        border: none;
+        cursor: pointer;
+      }
+
+      .job-cta-btn:hover {
+        background: var(--accent-strong);
+        transform: translateY(-1px);
+      }
+
+      .job-source {
+        font-size: 0.78rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="card">
+        <div class="eyebrow">Get Me Hired AI</div>
+        <h1>Search jobs.</h1>
+        <p class="intro">Enter a job title and location to see live results.</p>
+
+        <form id="search-form" class="search-form">
+          <div class="search-row">
+            <label class="field">
+              <span>Job title</span>
+              <input
+                type="text"
+                id="jobTitle"
+                placeholder="Software Engineer"
+                autocomplete="off"
+                maxlength="100"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>Location</span>
+              <input
+                type="text"
+                id="location"
+                placeholder="San Francisco, CA"
+                autocomplete="off"
+                maxlength="100"
+                required
+              />
+            </label>
+          </div>
+          <button id="search-btn" type="submit">Search jobs</button>
+        </form>
+
+        <!-- Loading -->
+        <div id="state-loading" class="state-area" hidden aria-live="polite" aria-label="Searching for jobs">
+          <div class="skeleton-list">
+            <div class="skeleton-card">
+              <div class="skeleton-line title"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line long"></div>
+              <div class="skeleton-line full"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="skeleton-line title"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line long"></div>
+              <div class="skeleton-line full"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="skeleton-line title"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line long"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty -->
+        <div id="state-empty" class="state-area" hidden aria-live="polite">
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h3>No results found</h3>
+            <p>Try a broader job title or a different location.<br>For example, "Engineer" instead of a specific niche role.</p>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="state-error" class="state-area" hidden aria-live="polite">
+          <div class="error-state" id="error-message"></div>
+        </div>
+
+        <!-- Results -->
+        <div id="state-results" class="state-area" hidden aria-live="polite">
+          <div class="results-header">
+            <p class="results-summary" id="results-summary"></p>
+          </div>
+          <div class="results-grid" id="results-grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const form      = document.getElementById("search-form");
+      const btn       = document.getElementById("search-btn");
+      const stLoading = document.getElementById("state-loading");
+      const stEmpty   = document.getElementById("state-empty");
+      const stError   = document.getElementById("state-error");
+      const stResults = document.getElementById("state-results");
+      const errMsg    = document.getElementById("error-message");
+      const summary   = document.getElementById("results-summary");
+      const grid      = document.getElementById("results-grid");
+
+      const ALL = [stLoading, stEmpty, stError, stResults];
+      const showOnly = (el) => ALL.forEach((s) => { s.hidden = s !== el; });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const jobTitle = document.getElementById("jobTitle").value.trim();
+        const location = document.getElementById("location").value.trim();
+        if (!jobTitle || !location) return;
+
+        btn.disabled = true;
+        btn.textContent = "Searching…";
+        showOnly(stLoading);
+
+        try {
+          const res  = await fetch(
+            `/api/search?jobTitle=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}`
+          );
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || "Something went wrong. Please try again.");
+          }
+
+          const matches = (data.results?.matches || []).slice(0, 10);
+
+          if (!matches.length) {
+            showOnly(stEmpty);
+          } else {
+            const n = matches.length;
+            summary.innerHTML = `Showing <strong>${n} job${n !== 1 ? "s" : ""}</strong> for <strong>${escapeHtml(jobTitle)}</strong> in <strong>${escapeHtml(location)}</strong>`;
+
+            grid.innerHTML = matches.map((job) => `
+              <div class="job-card">
+                <div class="job-card-top">
+                  <div>
+                    <p class="job-title">${escapeHtml(job.title)}</p>
+                    <p class="job-company">${escapeHtml(job.company)}</p>
+                  </div>
+                  ${job.salary ? `<span class="job-salary">${escapeHtml(job.salary)}</span>` : ""}
+                </div>
+                <p class="job-location">📍 ${escapeHtml(job.location)}</p>
+                <p class="job-summary">${escapeHtml(job.summary)}</p>
+                ${job.applyUrl ? `
+                  <div class="job-cta">
+                    <a class="job-cta-btn" href="${escapeHtml(job.applyUrl)}" target="_blank" rel="noopener noreferrer">
+                      View job &rarr;
+                    </a>
+                    <span class="job-source">${escapeHtml(job.source || "")}</span>
+                  </div>` : ""}
+              </div>
+            `).join("");
+
+            showOnly(stResults);
+          }
+        } catch (err) {
+          errMsg.textContent = err.message;
+          showOnly(stError);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Search jobs";
+        }
+      });
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+    </script>
+  </body>
+</html>

@@ -13,6 +13,18 @@ function renderMatchStatus(text) {
   matchesStatus.hidden = !text;
 }
 
+function getScoreToneClass(score) {
+  if (score >= 80) {
+    return "match-score-high";
+  }
+
+  if (score >= 60) {
+    return "match-score-medium";
+  }
+
+  return "match-score-low";
+}
+
 function renderMatches(jobSearch) {
   const matchesList = document.getElementById("job-matches-list");
   matchesList.innerHTML = "";
@@ -30,13 +42,14 @@ function renderMatches(jobSearch) {
   jobSearch.matches.forEach((match) => {
     const card = document.createElement("article");
     card.className = "match-card";
+    const scoreToneClass = getScoreToneClass(match.fitScore || 0);
     card.innerHTML = `
       <div class="match-card-top">
         <div>
           <h3 class="match-title">${match.title}</h3>
           <p class="match-company">${match.company}</p>
         </div>
-        <div class="match-score">${match.fitScore}% Fit</div>
+        <div class="match-score ${scoreToneClass}">${match.fitScore}% Fit</div>
       </div>
       <p class="match-location">${match.location}</p>
       <p class="match-summary">${match.summary}</p>
@@ -75,14 +88,15 @@ async function loadSubmission() {
     );
     const alertSettings = result.submission.alertSettings || {
       frequencyLabel: "Not saved on this older profile",
-      remoteOnly: false,
-      preferredJobTypeLabel: "Not saved on this older profile",
+      workPreferencesLabel: "Not saved on this older profile",
       salaryPreference: "",
     };
 
     setText("alert-frequency", alertSettings.frequencyLabel);
-    setText("alert-remote-only", alertSettings.remoteOnly ? "Yes" : "No");
-    setText("alert-job-type", alertSettings.preferredJobTypeLabel);
+    setText(
+      "alert-work-preferences",
+      alertSettings.workPreferencesLabel || "No work preferences saved"
+    );
     setText(
       "alert-salary",
       alertSettings.salaryPreference || "No salary preference saved"

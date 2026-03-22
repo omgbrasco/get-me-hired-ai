@@ -20,3 +20,4 @@ data/uploads/
 
 # misc
 *.pem
+.claude/

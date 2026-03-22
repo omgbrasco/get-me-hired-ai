@@ -9,17 +9,47 @@ const express = require("express");
 const fs = require("fs");
 const multer = require("multer");
 const { randomUUID } = require("crypto");
-const { fetchRankedJobMatches } = require("./src/services/jobSearch");
+const { fetchRankedJobMatches, searchJobsQuick } = require("./src/services/jobSearch");
 const { resolveResumeInput } = require("./src/services/resumeText");
 const { normalizeDesiredJobTitles } = require("./src/services/jobTitleTags");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Simple in-memory rate limiter for /api/search
+// 20 requests per IP per 60 seconds, no external dependency required
+const searchRateLimit = (() => {
+  const store = new Map();
+  const WINDOW_MS = 60 * 1000;
+  const MAX_REQUESTS = 20;
+
+  return (req, res, next) => {
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    const entry = store.get(ip);
+
+    if (!entry || now > entry.resetAt) {
+      store.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+      return next();
+    }
+
+    if (entry.count >= MAX_REQUESTS) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many requests. Please wait a moment and try again.",
+      });
+    }
+
+    entry.count += 1;
+    return next();
+  };
+})();
+
 const dataDir = path.join(__dirname, "data");
 const uploadsDir = path.join(dataDir, "uploads");
 const submissionsPath = path.join(dataDir, "submissions.json");
 const profilesPath = path.join(dataDir, "profiles.json");
+const waitlistPath = path.join(dataDir, "waitlist.json");
 
 const ALERT_FREQUENCY_DAYS = {
   daily: 1,
@@ -33,11 +63,11 @@ const ALERT_FREQUENCY_LABELS = {
   weekly: "Weekly",
 };
 
-const JOB_TYPE_LABELS = {
+const WORK_PREFERENCE_LABELS = {
   "full-time": "Full-time",
   "part-time": "Part-time",
-  contract: "Contract",
-  internship: "Internship",
+  remote: "Remote",
+  freelance: "Freelance",
 };
 
 function logStartupConfig() {
@@ -61,6 +91,10 @@ if (!fs.existsSync(submissionsPath)) {
 
 if (!fs.existsSync(profilesPath)) {
   fs.writeFileSync(profilesPath, "[]", "utf8");
+}
+
+if (!fs.existsSync(waitlistPath)) {
+  fs.writeFileSync(waitlistPath, "[]", "utf8");
 }
 
 const storage = multer.diskStorage({
@@ -108,16 +142,28 @@ function normalizeAlertSettings(rawSettings) {
   const frequency = ALERT_FREQUENCY_DAYS[rawSettings.frequency]
     ? rawSettings.frequency
     : "daily";
-  const preferredJobType = JOB_TYPE_LABELS[rawSettings.preferredJobType]
-    ? rawSettings.preferredJobType
-    : "full-time";
+  const workPreferenceInput = Array.isArray(rawSettings.workPreferences)
+    ? rawSettings.workPreferences
+    : rawSettings.workPreferences
+      ? [rawSettings.workPreferences]
+      : [];
+  const workPreferences = workPreferenceInput.filter(
+    (value) => WORK_PREFERENCE_LABELS[value]
+  );
+  const uniqueWorkPreferences = [...new Set(workPreferences)];
+  const workPreferenceLabels = uniqueWorkPreferences.map(
+    (value) => WORK_PREFERENCE_LABELS[value]
+  );
 
   return {
     frequency,
     frequencyLabel: ALERT_FREQUENCY_LABELS[frequency],
-    remoteOnly: Boolean(rawSettings.remoteOnly),
-    preferredJobType,
-    preferredJobTypeLabel: JOB_TYPE_LABELS[preferredJobType],
+    workPreferences: uniqueWorkPreferences,
+    workPreferenceLabels,
+    workPreferencesLabel: workPreferenceLabels.length
+      ? workPreferenceLabels.join(", ")
+      : "No specific preference saved",
+    remoteOnly: uniqueWorkPreferences.includes("remote"),
     salaryPreference: rawSettings.salaryPreference || "",
   };
 }
@@ -173,8 +219,7 @@ app.post("/submit", upload.single("resume"), async (req, res) => {
   const pastedResumeText = req.body.resumeText ? req.body.resumeText.trim() : "";
   const alertSettings = normalizeAlertSettings({
     frequency: req.body.alertFrequency,
-    remoteOnly: req.body.remoteOnly === "on",
-    preferredJobType: req.body.preferredJobType,
+    workPreferences: req.body.workPreferences,
     salaryPreference: req.body.salaryPreference ? req.body.salaryPreference.trim() : "",
   });
 
@@ -211,6 +256,7 @@ app.post("/submit", upload.single("resume"), async (req, res) => {
     desiredJobTitleTags: normalizedTitles.tags,
     location,
     resumeText: resumeInput.text,
+    workPreferences: alertSettings.workPreferences,
   });
 
   const profileRecord = {
@@ -277,6 +323,65 @@ app.get("/submission/:id", (req, res) => {
     success: true,
     submission,
   });
+});
+
+app.post("/api/waitlist", express.json(), (req, res) => {
+  try {
+    const name  = (req.body.name  || "").trim();
+    const email = (req.body.email || "").trim();
+    const tier  = (req.body.tier  || "").trim();
+    const note  = (req.body.note  || "").trim();
+
+    if (!name || !email || !tier) {
+      return res.status(400).json({ success: false, message: "Name, email, and tier are required." });
+    }
+
+    if (!email.includes("@")) {
+      return res.status(400).json({ success: false, message: "Please enter a valid email address." });
+    }
+
+    const VALID_TIERS = ["pro", "premium"];
+    if (!VALID_TIERS.includes(tier)) {
+      return res.status(400).json({ success: false, message: "Invalid tier." });
+    }
+
+    const entries = JSON.parse(fs.readFileSync(waitlistPath, "utf8"));
+    entries.push({ name, email, tier, note, createdAt: new Date().toISOString() });
+    fs.writeFileSync(waitlistPath, JSON.stringify(entries, null, 2), "utf8");
+
+    return res.json({ success: true, message: "You're on the list." });
+  } catch (_err) {
+    return res.status(500).json({ success: false, message: "Could not save your entry. Please try again." });
+  }
+});
+
+app.get("/api/search", searchRateLimit, async (req, res) => {
+  try {
+    const jobTitle = (req.query.jobTitle || "").trim();
+    const location = (req.query.location || "").trim();
+
+    if (!jobTitle || !location) {
+      return res.status(400).json({
+        success: false,
+        message: "jobTitle and location are required.",
+      });
+    }
+
+    if (jobTitle.length > 100 || location.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "jobTitle and location must each be 100 characters or fewer.",
+      });
+    }
+
+    const results = await searchJobsQuick({ jobTitle, location });
+    return res.json({ success: true, results });
+  } catch (_err) {
+    return res.status(500).json({
+      success: false,
+      message: "Search is unavailable right now. Please try again.",
+    });
+  }
 });
 
 app.get("/success", (_req, res) => {

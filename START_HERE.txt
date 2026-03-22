@@ -1,0 +1,25 @@
+PROJECT FOLDER
+/Users/bscobambam/Desktop/get-me-hired-ai
+
+START THE SERVER
+cd ~/Desktop/get-me-hired-ai && node server.js
+
+OPEN FROM YOUR PHONE (via localtunnel)
+1. Start the server (above)
+2. In a second Terminal tab: npx localtunnel --port 3000
+3. Open the printed URL on your phone
+4. Tap through the tunnel confirmation page
+
+PAGES TO TEST
+/ .............. Homepage (job profile intake form)
+/search.html ... Quick job search by title + location
+/pricing.html .. Pricing tiers (Free / Pro / Premium)
+/waitlist.html . Waitlist signup for Pro and Premium
+
+WHAT WAS FIXED
+1. Added -webkit-backdrop-filter prefix to styles.css — iOS Safari was not
+   rendering the card and modal correctly, causing a blank white page on mobile.
+2. Wrapped localStorage calls in try/catch in app.js — prevented a script crash
+   on mobile browsers with strict privacy settings (iOS Safari + localtunnel).
+
+STATUS: WORKING
