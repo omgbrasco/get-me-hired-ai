@@ -15,6 +15,7 @@ const { normalizeDesiredJobTitles } = require("./src/services/jobTitleTags");
 
 const app = express();
 const port = process.env.PORT || 3000;
+const isVercel = process.env.VERCEL === "1";
 
 // Simple in-memory rate limiter for /api/search
 // 20 requests per IP per 60 seconds, no external dependency required
@@ -45,7 +46,8 @@ const searchRateLimit = (() => {
   };
 })();
 
-const dataDir = path.join(__dirname, "data");
+const runtimeDataRoot = isVercel ? path.join("/tmp", "get-me-hired-ai") : __dirname;
+const dataDir = path.join(runtimeDataRoot, "data");
 const uploadsDir = path.join(dataDir, "uploads");
 const submissionsPath = path.join(dataDir, "submissions.json");
 const profilesPath = path.join(dataDir, "profiles.json");
