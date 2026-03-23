@@ -2,6 +2,7 @@ const DEFAULT_PROVIDER = "adzuna";
 const MAX_RESULTS = 10;
 const { rankJobMatches } = require("./jobRanking");
 const { buildSearchIntents } = require("./jobTitleTags");
+const { normalizeLocationInput } = require("./location");
 
 function getAdzunaCountry() {
   return process.env.ADZUNA_COUNTRY || "us";
@@ -80,14 +81,19 @@ async function searchAdzunaJobs({
     };
   }
 
+  const normalizedLocation = normalizeLocationInput(location);
+
   const params = new URLSearchParams({
     app_id: appId,
     app_key: appKey,
     results_per_page: String(MAX_RESULTS),
     what: normalizeQuery(desiredJobTitles, desiredJobTitleTags),
-    where: location,
     "content-type": "application/json",
   });
+
+  if (normalizedLocation.query) {
+    params.set("where", normalizedLocation.query);
+  }
 
   const response = await fetch(
     `https://api.adzuna.com/v1/api/jobs/${getAdzunaCountry()}/search/1?${params.toString()}`
@@ -104,11 +110,12 @@ async function searchAdzunaJobs({
     provider: DEFAULT_PROVIDER,
     status: "success",
     message: results.length ? "" : "No live job matches were found for this search yet.",
+    searchLocation: normalizedLocation.display,
     matches: rankJobMatches({
       jobs: results.slice(0, MAX_RESULTS).map(mapAdzunaJob),
       desiredJobTitles,
       desiredJobTitleTags,
-      location,
+      location: normalizedLocation.display,
       resumeText,
       workPreferences,
     }),

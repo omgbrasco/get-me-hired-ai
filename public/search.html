@@ -246,10 +246,9 @@
               <input
                 type="text"
                 id="location"
-                placeholder="San Francisco, CA"
+                placeholder="Los Angeles, CA, California, or leave blank"
                 autocomplete="off"
                 maxlength="100"
-                required
               />
             </label>
           </div>
@@ -325,16 +324,15 @@
         e.preventDefault();
         const jobTitle = document.getElementById("jobTitle").value.trim();
         const location = document.getElementById("location").value.trim();
-        if (!jobTitle || !location) return;
+        if (!jobTitle) return;
 
         btn.disabled = true;
         btn.textContent = "Searching…";
         showOnly(stLoading);
 
         try {
-          const res  = await fetch(
-            `/api/search?jobTitle=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}`
-          );
+          const params = new URLSearchParams({ jobTitle, location });
+          const res  = await fetch(`/api/search?${params.toString()}`);
           const data = await res.json();
 
           if (!res.ok || !data.success) {
@@ -350,7 +348,8 @@
             showOnly(stEmpty);
           } else {
             const n = matches.length;
-            summary.innerHTML = `Showing <strong>${n} job${n !== 1 ? "s" : ""}</strong> for <strong>${escapeHtml(jobTitle)}</strong> in <strong>${escapeHtml(location)}</strong>`;
+            const locationLabel = data.results?.searchLocation || location || "Remote or nationwide";
+            summary.innerHTML = `Showing <strong>${n} job${n !== 1 ? "s" : ""}</strong> for <strong>${escapeHtml(jobTitle)}</strong> in <strong>${escapeHtml(locationLabel)}</strong>`;
 
             grid.innerHTML = matches.map((job) => `
               <div class="job-card">
