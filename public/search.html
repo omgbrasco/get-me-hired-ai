@@ -331,8 +331,10 @@
         showOnly(stLoading);
 
         try {
-          const params = new URLSearchParams({ jobTitle, location });
-          const res  = await fetch(`/api/search?${params.toString()}`);
+          const query = `jobTitle=${encodeURIComponent(jobTitle)}${
+            location ? `&location=${encodeURIComponent(location)}` : ""
+          }`;
+          const res  = await fetch(`/api/search?${query}`);
           const data = await res.json();
 
           if (!res.ok || !data.success) {
