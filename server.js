@@ -10,6 +10,7 @@ const fs = require("fs");
 const multer = require("multer");
 const { randomUUID } = require("crypto");
 const { fetchRankedJobMatches, searchJobsQuick } = require("./src/services/jobSearch");
+const { normalizeLocationInput } = require("./src/services/location");
 const { resolveResumeInput } = require("./src/services/resumeText");
 const { normalizeDesiredJobTitles } = require("./src/services/jobTitleTags");
 
@@ -408,23 +409,34 @@ app.post("/api/waitlist", express.json(), async (req, res) => {
 app.get("/api/search", searchRateLimit, async (req, res) => {
   try {
     const jobTitle = (req.query.jobTitle || "").trim();
-    const location = (req.query.location || "").trim();
+    const location = normalizeLocationInput(req.query.location || "");
 
-    if (!jobTitle || !location) {
+    if (!jobTitle) {
       return res.status(400).json({
         success: false,
-        message: "jobTitle and location are required.",
+        message: "Please enter a job title to search.",
       });
     }
 
-    if (jobTitle.length > 100 || location.length > 100) {
+    if (jobTitle.length > 100 || location.input.length > 100) {
       return res.status(400).json({
         success: false,
-        message: "jobTitle and location must each be 100 characters or fewer.",
+        message: "Job title and location must each be 100 characters or fewer.",
       });
     }
 
-    const results = await searchJobsQuick({ jobTitle, location });
+    if (!location.isValid) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Please enter a simpler location like California, Los Angeles, CA, or leave it blank.",
+      });
+    }
+
+    const results = await searchJobsQuick({
+      jobTitle,
+      location: location.query,
+    });
 
     if (results.status === "failed") {
       return res.status(503).json({
