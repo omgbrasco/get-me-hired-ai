@@ -1,26 +1,23 @@
 const DEFAULT_PROVIDER = "adzuna";
 const MAX_RESULTS = 10;
 const { rankJobMatches } = require("./jobRanking");
+const { buildSearchIntents } = require("./jobTitleTags");
 
 function getAdzunaCountry() {
   return process.env.ADZUNA_COUNTRY || "us";
 }
 
 function normalizeQuery(desiredJobTitles, desiredJobTitleTags) {
-  const intentLabels = Array.isArray(desiredJobTitleTags)
-    ? desiredJobTitleTags.map((tag) => tag.label).filter(Boolean)
+  const tagQueryTerms = Array.isArray(desiredJobTitleTags)
+    ? desiredJobTitleTags
+        .flatMap((tag) => (Array.isArray(tag.queryTerms) ? tag.queryTerms : [tag.label]))
+        .filter(Boolean)
     : [];
 
-  if (intentLabels.length) {
-    return intentLabels.slice(0, 3).join(" OR ");
-  }
+  const intentQueryTerms = buildSearchIntents(desiredJobTitles).flatMap((intent) => intent.queryTerms);
+  const queryTerms = [...new Set([...tagQueryTerms, ...intentQueryTerms])];
 
-  return desiredJobTitles
-    .split(",")
-    .map((title) => title.trim())
-    .filter(Boolean)
-    .slice(0, 3)
-    .join(" OR ");
+  return queryTerms.slice(0, 8).join(" OR ");
 }
 
 function toSnippet(description) {

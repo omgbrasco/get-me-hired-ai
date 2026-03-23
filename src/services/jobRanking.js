@@ -1,3 +1,5 @@
+const { buildSearchIntents, isFuzzyMatch, normalizeSearchText } = require("./jobTitleTags");
+
 const STOP_WORDS = new Set([
   "a",
   "an",
@@ -38,9 +40,8 @@ const WORK_PREFERENCE_KEYWORDS = {
 };
 
 function tokenize(value) {
-  return (value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
+  return normalizeSearchText(value)
+    .replace(/,/g, " ")
     .split(/\s+/)
     .filter((token) => token && token.length > 1 && !STOP_WORDS.has(token));
 }
@@ -62,30 +63,69 @@ function keywordOverlap(left, right) {
 }
 
 function parseDesiredTitles(desiredJobTitles, desiredJobTitleTags) {
-  const normalizedLabels = Array.isArray(desiredJobTitleTags)
-    ? desiredJobTitleTags.map((tag) => tag.label).filter(Boolean)
+  const intentsFromTags = Array.isArray(desiredJobTitleTags)
+    ? desiredJobTitleTags
+        .filter((tag) => tag && tag.label)
+        .map((tag) => ({
+          rawTerm: tag.label,
+          normalizedTerm: normalizeSearchText(tag.normalizedTerm || tag.label),
+          label: tag.label,
+          tag: tag.tag,
+          synonyms: Array.isArray(tag.synonyms) ? tag.synonyms : [],
+          queryTerms: Array.isArray(tag.queryTerms) ? tag.queryTerms : [tag.label],
+        }))
     : [];
 
-  if (normalizedLabels.length) {
-    return normalizedLabels;
-  }
-
-  return desiredJobTitles
-    .split(",")
-    .map((title) => title.trim())
-    .filter(Boolean);
+  return intentsFromTags.length ? intentsFromTags : buildSearchIntents(desiredJobTitles);
 }
 
-function scoreTitleRelevance(job, desiredTitles) {
-  if (!desiredTitles.length) {
+function scoreIntentAgainstJobTitle(jobTitle, intent) {
+  const normalizedJobTitle = normalizeSearchText(jobTitle);
+  const normalizedIntent = normalizeSearchText(intent.normalizedTerm || intent.label);
+  const normalizedSynonyms = (intent.synonyms || []).map((term) => normalizeSearchText(term));
+  const normalizedLabel = normalizeSearchText(intent.label);
+
+  if (!normalizedJobTitle || !normalizedIntent) {
     return 0;
   }
 
-  const titleScores = desiredTitles.map((desiredTitle) => {
-    const exactBoost = job.title.toLowerCase().includes(desiredTitle.toLowerCase()) ? 0.35 : 0;
-    return Math.min(1, keywordOverlap(desiredTitle, job.title) + exactBoost);
-  });
+  if (
+    normalizedJobTitle === normalizedIntent ||
+    normalizedJobTitle.includes(normalizedIntent) ||
+    normalizedIntent.includes(normalizedJobTitle)
+  ) {
+    return 1;
+  }
 
+  if (
+    [normalizedLabel, ...normalizedSynonyms].some(
+      (term) =>
+        term &&
+        (normalizedJobTitle.includes(term) ||
+          term.includes(normalizedJobTitle) ||
+          keywordOverlap(term, normalizedJobTitle) >= 0.7)
+    )
+  ) {
+    return 0.82;
+  }
+
+  if (
+    [normalizedIntent, normalizedLabel, ...normalizedSynonyms].some(
+      (term) => term && isFuzzyMatch(term, normalizedJobTitle)
+    )
+  ) {
+    return 0.68;
+  }
+
+  return Math.min(0.55, keywordOverlap(`${normalizedIntent} ${normalizedSynonyms.join(" ")}`, normalizedJobTitle));
+}
+
+function scoreTitleRelevance(job, desiredIntents) {
+  if (!desiredIntents.length) {
+    return 0;
+  }
+
+  const titleScores = desiredIntents.map((intent) => scoreIntentAgainstJobTitle(job.title, intent));
   return Math.max(...titleScores, 0);
 }
 
@@ -229,12 +269,13 @@ function rankJobMatches({
   resumeText,
   workPreferences,
 }) {
-  const desiredTitles = parseDesiredTitles(desiredJobTitles, desiredJobTitleTags);
+  const desiredIntents = parseDesiredTitles(desiredJobTitles, desiredJobTitleTags);
+  const desiredTitles = desiredIntents.map((intent) => intent.label || intent.rawTerm).filter(Boolean);
   const resumeSource = resumeText || "";
 
   return jobs
     .map((job) => {
-      const titleScore = scoreTitleRelevance(job, desiredTitles);
+      const titleScore = scoreTitleRelevance(job, desiredIntents);
       const locationScore = scoreLocationRelevance(job.location, location);
       const workPreferenceScore = scoreWorkPreferenceRelevance(job, workPreferences);
       const resumeOverlapScore = keywordOverlap(resumeSource, `${job.title} ${job.description}`);
