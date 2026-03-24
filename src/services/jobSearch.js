@@ -79,8 +79,9 @@ async function searchAdzunaJobs({
     return {
       provider: DEFAULT_PROVIDER,
       status: "failed",
-      message:
-        "Live job search is not configured yet. Add your Adzuna API credentials to start fetching real jobs.",
+      message: "Search is unavailable right now. Please try again.",
+      errorCode: "ADZUNA_CONFIG_MISSING",
+      debugMessage: "ADZUNA_APP_ID or ADZUNA_APP_KEY is not configured.",
       matches: [],
     };
   }
@@ -181,10 +182,23 @@ async function searchJobsQuick({ jobTitle, location }) {
     });
   } catch (error) {
     console.error("[searchJobsQuick] Adzuna fetch failed:", error && error.message ? error.message : error);
+    const errorMessage = error && error.message ? error.message : "";
+    let errorCode = "ADZUNA_FETCH_FAILED";
+
+    if (errorMessage.indexOf("timed out") !== -1) {
+      errorCode = "ADZUNA_TIMEOUT";
+    } else if (errorMessage.indexOf("status") !== -1) {
+      errorCode = "ADZUNA_HTTP_ERROR";
+    } else if (errorMessage.indexOf("unreadable JSON") !== -1) {
+      errorCode = "ADZUNA_BAD_JSON";
+    }
+
     return {
       provider: DEFAULT_PROVIDER,
       status: "failed",
-      message: "Could not load job results right now. Please try again.",
+      message: "Search is unavailable right now. Please try again.",
+      errorCode,
+      debugMessage: errorMessage || "Unknown Adzuna fetch error.",
       matches: [],
     };
   }

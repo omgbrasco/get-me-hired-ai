@@ -153,6 +153,15 @@ function withTimeout(promise, timeoutMs, timeoutMessage) {
   });
 }
 
+function sendSearchError(res, statusCode, message, errorCode, debugMessage) {
+  return sendJson(res, statusCode, {
+    success: false,
+    message,
+    errorCode,
+    debugMessage,
+  });
+}
+
 function readSubmissions() {
   try {
     const submissions = JSON.parse(fs.readFileSync(submissionsPath, "utf8"));
@@ -437,25 +446,33 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     const location = normalizeLocationInput(req.query.location || "");
 
     if (!jobTitle) {
-      return sendJson(res, 400, {
-        success: false,
-        message: "Please enter a job title to search.",
-      });
+      return sendSearchError(
+        res,
+        400,
+        "Please enter a job title to search.",
+        "SEARCH_JOB_TITLE_REQUIRED",
+        "The request did not include a jobTitle query value."
+      );
     }
 
     if (jobTitle.length > 100 || location.input.length > 100) {
-      return sendJson(res, 400, {
-        success: false,
-        message: "Job title and location must each be 100 characters or fewer.",
-      });
+      return sendSearchError(
+        res,
+        400,
+        "Job title and location must each be 100 characters or fewer.",
+        "SEARCH_INPUT_TOO_LONG",
+        "The jobTitle or location value exceeded the 100 character limit."
+      );
     }
 
     if (!location.isValid) {
-      return sendJson(res, 400, {
-        success: false,
-        message:
-          "Please enter a simpler location like California, Los Angeles, CA, or leave it blank.",
-      });
+      return sendSearchError(
+        res,
+        400,
+        "Please enter a simpler location like California, Los Angeles, CA, or leave it blank.",
+        "SEARCH_LOCATION_INVALID",
+        "normalizeLocationInput rejected the provided location."
+      );
     }
 
     const results = await withTimeout(
@@ -468,19 +485,31 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     );
 
     if (results.status === "failed") {
-      return sendJson(res, 503, {
-        success: false,
-        message: results.message || "Search is unavailable right now. Please try again.",
-      });
+      return sendSearchError(
+        res,
+        503,
+        results.message || "Search is unavailable right now. Please try again.",
+        results.errorCode || "SEARCH_PROVIDER_FAILED",
+        results.debugMessage || "The search provider returned a failed result."
+      );
     }
 
     return sendJson(res, 200, { success: true, results });
   } catch (error) {
-    console.error("[/api/search] Unhandled error:", error && error.message ? error.message : error);
-    return sendJson(res, 500, {
-      success: false,
-      message: "Search is unavailable right now. Please try again.",
-    });
+    const errorMessage = error && error.message ? error.message : "Unknown search route error.";
+    const errorCode =
+      errorMessage === "Search request timed out before a stable response was ready."
+        ? "SEARCH_ROUTE_TIMEOUT"
+        : "SEARCH_ROUTE_ERROR";
+
+    console.error("[/api/search] Unhandled error:", errorMessage);
+    return sendSearchError(
+      res,
+      500,
+      "Search is unavailable right now. Please try again.",
+      errorCode,
+      errorMessage
+    );
   }
 });
 
