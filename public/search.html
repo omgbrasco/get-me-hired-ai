@@ -306,117 +306,161 @@
     </main>
 
     <script>
-      const form      = document.getElementById("search-form");
-      const btn       = document.getElementById("search-btn");
-      const stLoading = document.getElementById("state-loading");
-      const stEmpty   = document.getElementById("state-empty");
-      const stError   = document.getElementById("state-error");
-      const stResults = document.getElementById("state-results");
-      const errMsg    = document.getElementById("error-message");
-      const emptyMsg  = document.getElementById("empty-message");
-      const summary   = document.getElementById("results-summary");
-      const grid      = document.getElementById("results-grid");
-
-      const ALL = [stLoading, stEmpty, stError, stResults];
-      const showOnly = (el) => ALL.forEach((s) => { s.hidden = s !== el; });
-      const showError = (message) => {
-        errMsg.textContent = message;
-        showOnly(stError);
-      };
-
-      function buildSearchRequestUrl(jobTitle, location) {
-        const url = new URL("/api/search", window.location.origin);
-        const params = new URLSearchParams();
-
-        params.set("jobTitle", jobTitle);
-        if (location) {
-          params.set("location", location);
-        }
-
-        url.search = params.toString();
-        return url.toString();
-      }
-
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const jobTitle = document.getElementById("jobTitle").value.trim();
-        const location = document.getElementById("location").value.trim();
-        errMsg.textContent = "";
-
-        if (!jobTitle) {
-          showError("Please enter a job title to search.");
-          document.getElementById("jobTitle").focus();
-          return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = "Searching…";
-        showOnly(stLoading);
-
-        try {
-          const requestUrl = buildSearchRequestUrl(jobTitle, location);
-          const res  = await fetch(requestUrl, {
-            method: "GET",
-            headers: { Accept: "application/json" },
-          });
-          const data = await res.json().catch(() => ({
-            success: false,
-            message: "Search returned an unreadable response. Please try again.",
-          }));
-
-          if (!res.ok || !data.success) {
-            throw new Error(data.message || "Something went wrong. Please try again.");
-          }
-
-          const matches = (data.results?.matches || []).slice(0, 10);
-
-          if (!matches.length) {
-            emptyMsg.innerHTML = data.results?.message
-              ? escapeHtml(data.results.message)
-              : 'Try a broader job title or a different location.<br>For example, "Engineer" instead of a specific niche role.';
-            showOnly(stEmpty);
-          } else {
-            const n = matches.length;
-            const locationLabel = data.results?.searchLocation || location || "Remote or nationwide";
-            summary.innerHTML = `Showing <strong>${n} job${n !== 1 ? "s" : ""}</strong> for <strong>${escapeHtml(jobTitle)}</strong> in <strong>${escapeHtml(locationLabel)}</strong>`;
-
-            grid.innerHTML = matches.map((job) => `
-              <div class="job-card">
-                <div class="job-card-top">
-                  <div>
-                    <p class="job-title">${escapeHtml(job.title)}</p>
-                    <p class="job-company">${escapeHtml(job.company)}</p>
-                  </div>
-                  ${job.salary ? `<span class="job-salary">${escapeHtml(job.salary)}</span>` : ""}
-                </div>
-                <p class="job-location">📍 ${escapeHtml(job.location)}</p>
-                <p class="job-summary">${escapeHtml(job.summary)}</p>
-                ${job.applyUrl ? `
-                  <div class="job-cta">
-                    <a class="job-cta-btn" href="${escapeHtml(job.applyUrl)}" target="_blank" rel="noopener noreferrer">
-                      View job &rarr;
-                    </a>
-                    <span class="job-source">${escapeHtml(job.source || "")}</span>
-                  </div>` : ""}
-              </div>
-            `).join("");
-
-            showOnly(stResults);
-          }
-        } catch (err) {
-          showError(err instanceof Error ? err.message : "Search failed. Please try again.");
-        } finally {
-          btn.disabled = false;
-          btn.textContent = "Search jobs";
-        }
-      });
-
       function escapeHtml(str) {
         return String(str)
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;");
+      }
+
+      function initSearchPage() {
+        var form = document.getElementById("search-form");
+        var btn = document.getElementById("search-btn");
+        var stLoading = document.getElementById("state-loading");
+        var stEmpty = document.getElementById("state-empty");
+        var stError = document.getElementById("state-error");
+        var stResults = document.getElementById("state-results");
+        var errMsg = document.getElementById("error-message");
+        var emptyMsg = document.getElementById("empty-message");
+        var summary = document.getElementById("results-summary");
+        var grid = document.getElementById("results-grid");
+        var jobTitleInput = document.getElementById("jobTitle");
+        var locationInput = document.getElementById("location");
+
+        if (!form || !btn || !jobTitleInput || !locationInput) {
+          console.log("[search] init skipped: required elements missing");
+          return;
+        }
+
+        if (form.dataset.bound === "true") {
+          return;
+        }
+
+        form.dataset.bound = "true";
+        console.log("[search] init complete");
+
+        var allStates = [stLoading, stEmpty, stError, stResults];
+
+        function showOnly(el) {
+          allStates.forEach(function (stateEl) {
+            stateEl.hidden = stateEl !== el;
+          });
+        }
+
+        function showError(message) {
+          errMsg.textContent = message;
+          showOnly(stError);
+        }
+
+        function buildSearchRequestUrl(jobTitle, location) {
+          var url = new URL("/api/search", window.location.origin);
+          var params = new URLSearchParams();
+
+          params.set("jobTitle", jobTitle);
+          if (location) {
+            params.set("location", location);
+          }
+
+          url.search = params.toString();
+          return url.toString();
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          console.log("[search] submit fired");
+
+          var jobTitle = jobTitleInput.value.trim();
+          var location = locationInput.value.trim();
+          errMsg.textContent = "";
+
+          if (!jobTitle) {
+            showError("Please enter a job title to search.");
+            jobTitleInput.focus();
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Searching…";
+          showOnly(stLoading);
+
+          (async function () {
+            try {
+              var requestUrl = buildSearchRequestUrl(jobTitle, location);
+              console.log("[search] fetching", requestUrl);
+
+              var res = await fetch(requestUrl, {
+                method: "GET",
+                headers: { Accept: "application/json" },
+              });
+
+              var data;
+              try {
+                data = await res.json();
+              } catch (_error) {
+                data = {
+                  success: false,
+                  message: "Search returned an unreadable response. Please try again.",
+                };
+              }
+
+              if (!res.ok || !data.success) {
+                throw new Error(data.message || "Something went wrong. Please try again.");
+              }
+
+              var results = data && data.results ? data.results : {};
+              var matches = Array.isArray(results.matches) ? results.matches.slice(0, 10) : [];
+
+              if (!matches.length) {
+                emptyMsg.innerHTML = results.message
+                  ? escapeHtml(results.message)
+                  : 'Try a broader job title or a different location.<br>For example, "Engineer" instead of a specific niche role.';
+                showOnly(stEmpty);
+                return;
+              }
+
+              var n = matches.length;
+              var locationLabel = results.searchLocation || location || "Remote or nationwide";
+              summary.innerHTML = 'Showing <strong>' + n + ' job' + (n !== 1 ? 's' : '') + '</strong> for <strong>' + escapeHtml(jobTitle) + '</strong> in <strong>' + escapeHtml(locationLabel) + '</strong>';
+
+              grid.innerHTML = matches.map(function (job) {
+                return '\
+              <div class="job-card">\
+                <div class="job-card-top">\
+                  <div>\
+                    <p class="job-title">' + escapeHtml(job.title) + '</p>\
+                    <p class="job-company">' + escapeHtml(job.company) + '</p>\
+                  </div>\
+                  ' + (job.salary ? '<span class="job-salary">' + escapeHtml(job.salary) + '</span>' : '') + '\
+                </div>\
+                <p class="job-location">📍 ' + escapeHtml(job.location) + '</p>\
+                <p class="job-summary">' + escapeHtml(job.summary) + '</p>\
+                ' + (job.applyUrl
+                    ? '<div class="job-cta">\
+                        <a class="job-cta-btn" href="' + escapeHtml(job.applyUrl) + '" target="_blank" rel="noopener noreferrer">\
+                          View job &rarr;\
+                        </a>\
+                        <span class="job-source">' + escapeHtml(job.source || "") + '</span>\
+                      </div>'
+                    : '') + '\
+              </div>';
+              }).join("");
+
+              showOnly(stResults);
+            } catch (err) {
+              showError(err && err.message ? err.message : "Search failed. Please try again.");
+            } finally {
+              btn.disabled = false;
+              btn.textContent = "Search jobs";
+            }
+          })();
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initSearchPage, { once: true });
+      } else {
+        initSearchPage();
       }
     </script>
   </body>
