@@ -319,23 +319,50 @@
 
       const ALL = [stLoading, stEmpty, stError, stResults];
       const showOnly = (el) => ALL.forEach((s) => { s.hidden = s !== el; });
+      const showError = (message) => {
+        errMsg.textContent = message;
+        showOnly(stError);
+      };
+
+      function buildSearchRequestUrl(jobTitle, location) {
+        const url = new URL("/api/search", window.location.origin);
+        const params = new URLSearchParams();
+
+        params.set("jobTitle", jobTitle);
+        if (location) {
+          params.set("location", location);
+        }
+
+        url.search = params.toString();
+        return url.toString();
+      }
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const jobTitle = document.getElementById("jobTitle").value.trim();
         const location = document.getElementById("location").value.trim();
-        if (!jobTitle) return;
+        errMsg.textContent = "";
+
+        if (!jobTitle) {
+          showError("Please enter a job title to search.");
+          document.getElementById("jobTitle").focus();
+          return;
+        }
 
         btn.disabled = true;
         btn.textContent = "Searching…";
         showOnly(stLoading);
 
         try {
-          const query = `jobTitle=${encodeURIComponent(jobTitle)}${
-            location ? `&location=${encodeURIComponent(location)}` : ""
-          }`;
-          const res  = await fetch(`/api/search?${query}`);
-          const data = await res.json();
+          const requestUrl = buildSearchRequestUrl(jobTitle, location);
+          const res  = await fetch(requestUrl, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+          });
+          const data = await res.json().catch(() => ({
+            success: false,
+            message: "Search returned an unreadable response. Please try again.",
+          }));
 
           if (!res.ok || !data.success) {
             throw new Error(data.message || "Something went wrong. Please try again.");
@@ -377,8 +404,7 @@
             showOnly(stResults);
           }
         } catch (err) {
-          errMsg.textContent = err.message;
-          showOnly(stError);
+          showError(err instanceof Error ? err.message : "Search failed. Please try again.");
         } finally {
           btn.disabled = false;
           btn.textContent = "Search jobs";
