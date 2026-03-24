@@ -4,6 +4,30 @@ const message = document.getElementById("results-message");
 const resultsCard = document.getElementById("results-card");
 const matchesStatus = document.getElementById("job-matches-status");
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Only allow http(s) URLs for job links — blocks javascript: and other schemes. */
+function safeHttpUrl(raw) {
+  if (!raw || typeof raw !== "string") {
+    return "";
+  }
+  try {
+    const u = new URL(raw.trim());
+    if (u.protocol === "http:" || u.protocol === "https:") {
+      return u.href;
+    }
+  } catch (_e) {
+    /* invalid URL */
+  }
+  return "";
+}
+
 function setText(id, value) {
   document.getElementById(id).textContent = value;
 }
@@ -42,21 +66,25 @@ function renderMatches(jobSearch) {
   jobSearch.matches.forEach((match) => {
     const card = document.createElement("article");
     card.className = "match-card";
-    const scoreToneClass = getScoreToneClass(match.fitScore || 0);
+    const scoreNum = Number(match.fitScore);
+    const fitScore = Number.isFinite(scoreNum) ? Math.round(scoreNum) : 0;
+    const scoreToneClass = getScoreToneClass(fitScore);
+    const applyHref = safeHttpUrl(match.applyUrl);
+
     card.innerHTML = `
       <div class="match-card-top">
         <div>
-          <h3 class="match-title">${match.title}</h3>
-          <p class="match-company">${match.company}</p>
+          <h3 class="match-title">${escapeHtml(match.title ?? "")}</h3>
+          <p class="match-company">${escapeHtml(match.company ?? "")}</p>
         </div>
-        <div class="match-score ${scoreToneClass}">${match.fitScore}% Fit</div>
+        <div class="match-score ${scoreToneClass}">${fitScore}% Fit</div>
       </div>
-      <p class="match-location">${match.location}</p>
-      <p class="match-summary">${match.summary}</p>
-      <p class="match-why"><strong>Why it matches:</strong> ${match.whyItMatches}</p>
+      <p class="match-location">${escapeHtml(match.location ?? "")}</p>
+      <p class="match-summary">${escapeHtml(match.summary ?? "")}</p>
+      <p class="match-why"><strong>Why it matches:</strong> ${escapeHtml(match.whyItMatches ?? "")}</p>
       ${
-        match.applyUrl
-          ? `<p class="match-link-wrap"><a class="match-link" href="${match.applyUrl}" target="_blank" rel="noreferrer">View job</a></p>`
+        applyHref
+          ? `<p class="match-link-wrap"><a class="match-link" href="${escapeHtml(applyHref)}" target="_blank" rel="noreferrer">View job</a></p>`
           : `<p class="match-link-wrap match-link-muted">Source link unavailable</p>`
       }
     `;

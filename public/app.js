@@ -21,7 +21,7 @@ function validateForm(formData) {
     return "Please complete all required fields.";
   }
 
-  if (!email.includes("@")) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return "Please enter a valid email address.";
   }
 

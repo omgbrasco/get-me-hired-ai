@@ -17,13 +17,10 @@ const { normalizeDesiredJobTitles } = require("./src/services/jobTitleTags");
 const app = express();
 const port = process.env.PORT || 3000;
 const isVercel = process.env.VERCEL === "1";
+const exposeSearchDebug = process.env.EXPOSE_SEARCH_DEBUG === "true";
 
-// Simple in-memory rate limiter for /api/search
-// 20 requests per IP per 60 seconds, no external dependency required
-const searchRateLimit = (() => {
+function createRateLimiter(maxRequests, windowMs) {
   const store = new Map();
-  const WINDOW_MS = 60 * 1000;
-  const MAX_REQUESTS = 20;
 
   return (req, res, next) => {
     const ip = req.ip || req.socket.remoteAddress || "unknown";
@@ -31,11 +28,11 @@ const searchRateLimit = (() => {
     const entry = store.get(ip);
 
     if (!entry || now > entry.resetAt) {
-      store.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+      store.set(ip, { count: 1, resetAt: now + windowMs });
       return next();
     }
 
-    if (entry.count >= MAX_REQUESTS) {
+    if (entry.count >= maxRequests) {
       return res.status(429).json({
         success: false,
         message: "Too many requests. Please wait a moment and try again.",
@@ -45,7 +42,11 @@ const searchRateLimit = (() => {
     entry.count += 1;
     return next();
   };
-})();
+}
+
+// In-memory rate limits per IP (no extra dependency)
+const searchRateLimit = createRateLimiter(20, 60 * 1000);
+const submitRateLimit = createRateLimiter(5, 60 * 1000);
 
 const runtimeDataRoot = isVercel ? path.join("/tmp", "get-me-hired-ai") : __dirname;
 const dataDir = path.join(runtimeDataRoot, "data");
@@ -101,6 +102,8 @@ if (!fs.existsSync(waitlistPath)) {
   fs.writeFileSync(waitlistPath, "[]", "utf8");
 }
 
+const RESUME_UPLOAD_EXTENSIONS = new Set([".txt", ".md", ".text"]);
+
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => {
     callback(null, uploadsDir);
@@ -115,6 +118,14 @@ const upload = multer({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (RESUME_UPLOAD_EXTENSIONS.has(ext)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("INVALID_RESUME_EXTENSION"));
   },
 });
 
@@ -154,12 +165,14 @@ function withTimeout(promise, timeoutMs, timeoutMessage) {
 }
 
 function sendSearchError(res, statusCode, message, errorCode, debugMessage) {
-  return sendJson(res, statusCode, {
-    success: false,
-    message,
-    errorCode,
-    debugMessage,
-  });
+  if (debugMessage) {
+    console.error("[/api/search] error detail:", debugMessage);
+  }
+  const payload = { success: false, message, errorCode };
+  if (exposeSearchDebug && debugMessage) {
+    payload.debugMessage = debugMessage;
+  }
+  return sendJson(res, statusCode, payload);
 }
 
 function readSubmissions() {
@@ -181,7 +194,19 @@ function readProfiles() {
 }
 
 function writeProfiles(profiles) {
-  fs.writeFileSync(profilesPath, JSON.stringify(profiles, null, 2), "utf8");
+  const dir = path.dirname(profilesPath);
+  const tmpPath = path.join(dir, `.profiles.${randomUUID()}.tmp`);
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(profiles, null, 2), "utf8");
+    fs.renameSync(tmpPath, profilesPath);
+  } catch (error) {
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch (_unlinkErr) {
+      /* ignore */
+    }
+    throw error;
+  }
 }
 
 function normalizeAlertSettings(rawSettings) {
@@ -255,7 +280,18 @@ function findSubmissionView(submissionId) {
   return submissions.find((entry) => entry.id === submissionId) || null;
 }
 
-app.post("/submit", upload.single("resume"), async (req, res) => {
+function isValidEmail(value) {
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > 254) {
+    return false;
+  }
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+}
+
+app.post("/submit", submitRateLimit, upload.single("resume"), async (req, res) => {
   const fullName = req.body.fullName ? req.body.fullName.trim() : "";
   const email = req.body.email ? req.body.email.trim() : "";
   const desiredJobTitles = req.body.desiredJobTitles
@@ -274,6 +310,13 @@ app.post("/submit", upload.single("resume"), async (req, res) => {
       success: false,
       message:
         "Please provide your email, desired job titles, location, and either a resume upload or pasted resume text.",
+    });
+  }
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please enter a valid email address.",
     });
   }
 
@@ -424,7 +467,7 @@ app.post("/api/waitlist", express.json(), async (req, res) => {
       return res.status(400).json({ success: false, message: "Name, email, and tier are required." });
     }
 
-    if (!email.includes("@")) {
+    if (!isValidEmail(email)) {
       return res.status(400).json({ success: false, message: "Please enter a valid email address." });
     }
 
@@ -539,6 +582,23 @@ app.get("/apple-touch-icon-precomposed.png", (_req, res) => {
 
 app.get("/success", (_req, res) => {
   sendPublicFile(res, "success.html");
+});
+
+app.use((err, req, res, next) => {
+  if (err && err.message === "INVALID_RESUME_EXTENSION") {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Please upload a .txt or .md resume file, or paste your resume text in the box below.",
+    });
+  }
+  if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      success: false,
+      message: "That file is too large. Maximum size is 10 MB.",
+    });
+  }
+  next(err);
 });
 
 if (require.main === module) {

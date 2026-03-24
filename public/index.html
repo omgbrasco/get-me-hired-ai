@@ -136,26 +136,25 @@
           </fieldset>
 
           <label class="field">
-            <span>Resume upload</span>
+            <span>Resume upload (optional if you paste text below)</span>
             <input
               type="file"
               name="resume"
-              accept=".pdf,.doc,.docx,.txt"
-              required
+              accept=".txt,.md,.text,text/plain"
               aria-describedby="form-message"
             />
-            <small>PDF, DOC, DOCX, or TXT up to 10MB</small>
+            <small>Plain text only: .txt or .md, up to 10MB — or paste your resume below.</small>
           </label>
 
           <label class="field">
-            <span>Pasted resume text (recommended fallback)</span>
+            <span>Pasted resume text</span>
             <textarea
               name="resumeText"
               rows="6"
-              placeholder="Paste plain text from your resume here to improve fit ranking if your uploaded file is hard to parse."
+              placeholder="Paste plain text from your resume here (recommended). The app ranks jobs from this text."
               aria-describedby="form-message"
             ></textarea>
-            <small>Optional, but helps the ranking use your resume keywords right away.</small>
+            <small>Required unless you upload a .txt/.md file above.</small>
           </label>
 
           <p class="trust-note">
