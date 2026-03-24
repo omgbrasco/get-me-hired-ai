@@ -135,6 +135,24 @@ function sendJson(res, statusCode, payload) {
   return res.json(payload);
 }
 
+function withTimeout(promise, timeoutMs, timeoutMessage) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+
+    Promise.resolve(promise)
+      .then((value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
+
 function readSubmissions() {
   try {
     const submissions = JSON.parse(fs.readFileSync(submissionsPath, "utf8"));
@@ -440,10 +458,14 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
       });
     }
 
-    const results = await searchJobsQuick({
-      jobTitle,
-      location: location.query,
-    });
+    const results = await withTimeout(
+      searchJobsQuick({
+        jobTitle,
+        location: location.query,
+      }),
+      8000,
+      "Search request timed out before a stable response was ready."
+    );
 
     if (results.status === "failed") {
       return sendJson(res, 503, {
