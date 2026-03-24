@@ -64,16 +64,6 @@ function mapAdzunaJob(job) {
   };
 }
 
-function buildFailureResult(message, debug) {
-  return {
-    provider: DEFAULT_PROVIDER,
-    status: "failed",
-    message,
-    debug,
-    matches: [],
-  };
-}
-
 async function searchAdzunaJobs({
   desiredJobTitles,
   desiredJobTitleTags,
@@ -85,15 +75,13 @@ async function searchAdzunaJobs({
   const appKey = process.env.ADZUNA_APP_KEY;
 
   if (!appId || !appKey) {
-    return buildFailureResult(
-      "Live job search is not configured yet. Add your Adzuna API credentials to start fetching real jobs.",
-      {
-        branch: "missing_env",
-        hasAdzunaAppId: Boolean(appId),
-        hasAdzunaAppKey: Boolean(appKey),
-        adzunaCountry: getAdzunaCountry(),
-      }
-    );
+    return {
+      provider: DEFAULT_PROVIDER,
+      status: "failed",
+      message:
+        "Live job search is not configured yet. Add your Adzuna API credentials to start fetching real jobs.",
+      matches: [],
+    };
   }
 
   const normalizedLocation = normalizeLocationInput(location);
@@ -113,38 +101,11 @@ async function searchAdzunaJobs({
   const requestUrl = `https://api.adzuna.com/v1/api/jobs/${getAdzunaCountry()}/search/1?${params.toString()}`;
   const response = await fetch(requestUrl);
 
-  console.log("[api/search][adzuna] upstream response", {
-    branch: "upstream_response",
-    status: response.status,
-    ok: response.ok,
-    hasLocation: Boolean(normalizedLocation.query),
-    adzunaCountry: getAdzunaCountry(),
-  });
-
   if (!response.ok) {
-    const responseText = await response.text().catch(() => "");
-    throw Object.assign(new Error(`Jobs API request failed with status ${response.status}.`), {
-      debug: {
-        branch: "upstream_http_error",
-        status: response.status,
-        bodyPreview: responseText.slice(0, 200),
-        adzunaCountry: getAdzunaCountry(),
-      },
-    });
+    throw new Error(`Jobs API request failed with status ${response.status}.`);
   }
 
-  let payload;
-  try {
-    payload = await response.json();
-  } catch (error) {
-    throw Object.assign(new Error("Jobs API returned unreadable JSON."), {
-      debug: {
-        branch: "upstream_json_parse_failed",
-        adzunaCountry: getAdzunaCountry(),
-        errorMessage: error instanceof Error ? error.message : String(error),
-      },
-    });
-  }
+  const payload = await response.json();
   const results = Array.isArray(payload.results) ? payload.results : [];
 
   return {
@@ -178,14 +139,14 @@ async function fetchRankedJobMatches({
       resumeText,
       workPreferences,
     });
-  } catch (error) {
-    return buildFailureResult(
-      "We could not load live job matches right now. Your submission was still saved successfully.",
-      {
-        branch: "fetch_ranked_job_matches_failed",
-        reason: error && error.debug ? error.debug : { message: error.message },
-      }
-    );
+  } catch (_error) {
+    return {
+      provider: DEFAULT_PROVIDER,
+      status: "failed",
+      message:
+        "We could not load live job matches right now. Your submission was still saved successfully.",
+      matches: [],
+    };
   }
 }
 
@@ -198,11 +159,13 @@ async function searchJobsQuick({ jobTitle, location }) {
       resumeText: "",
       workPreferences: [],
     });
-  } catch (error) {
-    return buildFailureResult("Could not load job results right now. Please try again.", {
-      branch: "search_jobs_quick_failed",
-      reason: error && error.debug ? error.debug : { message: error.message },
-    });
+  } catch (_error) {
+    return {
+      provider: DEFAULT_PROVIDER,
+      status: "failed",
+      message: "Could not load job results right now. Please try again.",
+      matches: [],
+    };
   }
 }
 

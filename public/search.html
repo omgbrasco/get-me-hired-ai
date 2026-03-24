@@ -329,7 +329,6 @@
         var locationInput = document.getElementById("location");
 
         if (!form || !btn || !jobTitleInput || !locationInput) {
-          console.log("[search] init skipped: required elements missing");
           return;
         }
 
@@ -338,7 +337,6 @@
         }
 
         form.dataset.bound = "true";
-        console.log("[search] init complete");
 
         var allStates = [stLoading, stEmpty, stError, stResults];
 
@@ -354,21 +352,17 @@
         }
 
         function buildSearchRequestUrl(jobTitle, location) {
-          var url = new URL("/api/search", window.location.origin);
-          var params = new URLSearchParams();
+          var query = "jobTitle=" + encodeURIComponent(jobTitle);
 
-          params.set("jobTitle", jobTitle);
           if (location) {
-            params.set("location", location);
+            query += "&location=" + encodeURIComponent(location);
           }
 
-          url.search = params.toString();
-          return url.toString();
+          return "/api/search?" + query;
         }
 
         form.addEventListener("submit", function (e) {
           e.preventDefault();
-          console.log("[search] submit fired");
 
           var jobTitle = jobTitleInput.value.trim();
           var location = locationInput.value.trim();
@@ -387,12 +381,7 @@
           (async function () {
             try {
               var requestUrl = buildSearchRequestUrl(jobTitle, location);
-              console.log("[search] fetching", requestUrl);
-
-              var res = await fetch(requestUrl, {
-                method: "GET",
-                headers: { Accept: "application/json" },
-              });
+              var res = await fetch(requestUrl);
 
               var data;
               try {

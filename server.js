@@ -411,48 +411,25 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     const jobTitle = (req.query.jobTitle || "").trim();
     const location = normalizeLocationInput(req.query.location || "");
 
-    console.log("[api/search] request received", {
-      branch: "request_received",
-      hasJobTitle: Boolean(jobTitle),
-      hasLocation: Boolean(location.input),
-      normalizedLocationType: location.type,
-      hasAdzunaAppId: Boolean(process.env.ADZUNA_APP_ID),
-      hasAdzunaAppKey: Boolean(process.env.ADZUNA_APP_KEY),
-      adzunaCountry: process.env.ADZUNA_COUNTRY || "us",
-    });
-
     if (!jobTitle) {
-      console.log("[api/search] validation failed", {
-        branch: "missing_job_title",
-      });
       return res.status(400).json({
         success: false,
         message: "Please enter a job title to search.",
-        debugReason: "missing_job_title",
       });
     }
 
     if (jobTitle.length > 100 || location.input.length > 100) {
-      console.log("[api/search] validation failed", {
-        branch: "input_too_long",
-      });
       return res.status(400).json({
         success: false,
         message: "Job title and location must each be 100 characters or fewer.",
-        debugReason: "input_too_long",
       });
     }
 
     if (!location.isValid) {
-      console.log("[api/search] validation failed", {
-        branch: "invalid_location",
-        normalizedLocationType: location.type,
-      });
       return res.status(400).json({
         success: false,
         message:
           "Please enter a simpler location like California, Los Angeles, CA, or leave it blank.",
-        debugReason: "invalid_location",
       });
     }
 
@@ -462,36 +439,17 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     });
 
     if (results.status === "failed") {
-      console.log("[api/search] upstream failure", {
-        branch: "search_jobs_quick_failed",
-        debug: results.debug || null,
-      });
       return res.status(503).json({
         success: false,
         message: results.message || "Search is unavailable right now. Please try again.",
-        debugReason: results.debug || { branch: "search_jobs_quick_failed" },
       });
     }
 
-    console.log("[api/search] success", {
-      branch: "success",
-      matchCount: Array.isArray(results.matches) ? results.matches.length : 0,
-      searchLocation: results.searchLocation || location.display,
-    });
-
     return res.json({ success: true, results });
-  } catch (error) {
-    console.log("[api/search] unexpected failure", {
-      branch: "unexpected_error",
-      message: error instanceof Error ? error.message : String(error),
-    });
+  } catch (_error) {
     return res.status(500).json({
       success: false,
       message: "Search is unavailable right now. Please try again.",
-      debugReason: {
-        branch: "unexpected_error",
-        message: error instanceof Error ? error.message : String(error),
-      },
     });
   }
 });
