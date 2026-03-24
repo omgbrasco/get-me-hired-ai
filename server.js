@@ -128,6 +128,13 @@ function sendPublicFile(res, fileName) {
   });
 }
 
+function sendJson(res, statusCode, payload) {
+  res.status(statusCode);
+  res.type("application/json");
+  res.set("Cache-Control", "no-store");
+  return res.json(payload);
+}
+
 function readSubmissions() {
   try {
     const submissions = JSON.parse(fs.readFileSync(submissionsPath, "utf8"));
@@ -412,21 +419,21 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     const location = normalizeLocationInput(req.query.location || "");
 
     if (!jobTitle) {
-      return res.status(400).json({
+      return sendJson(res, 400, {
         success: false,
         message: "Please enter a job title to search.",
       });
     }
 
     if (jobTitle.length > 100 || location.input.length > 100) {
-      return res.status(400).json({
+      return sendJson(res, 400, {
         success: false,
         message: "Job title and location must each be 100 characters or fewer.",
       });
     }
 
     if (!location.isValid) {
-      return res.status(400).json({
+      return sendJson(res, 400, {
         success: false,
         message:
           "Please enter a simpler location like California, Los Angeles, CA, or leave it blank.",
@@ -439,16 +446,16 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     });
 
     if (results.status === "failed") {
-      return res.status(503).json({
+      return sendJson(res, 503, {
         success: false,
         message: results.message || "Search is unavailable right now. Please try again.",
       });
     }
 
-    return res.json({ success: true, results });
+    return sendJson(res, 200, { success: true, results });
   } catch (error) {
     console.error("[/api/search] Unhandled error:", error && error.message ? error.message : error);
-    return res.status(500).json({
+    return sendJson(res, 500, {
       success: false,
       message: "Search is unavailable right now. Please try again.",
     });

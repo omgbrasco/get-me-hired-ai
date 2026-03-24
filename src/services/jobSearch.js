@@ -1,5 +1,6 @@
 const DEFAULT_PROVIDER = "adzuna";
 const MAX_RESULTS = 10;
+const ADZUNA_TIMEOUT_MS = 4000;
 const { rankJobMatches } = require("./jobRanking");
 const { normalizeLocationInput } = require("./location");
 
@@ -101,10 +102,16 @@ async function searchAdzunaJobs({
   const requestUrl = `https://api.adzuna.com/v1/api/jobs/${getAdzunaCountry()}/search/1?${params.toString()}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  const timeoutId = setTimeout(() => controller.abort(), ADZUNA_TIMEOUT_MS);
   let response;
   try {
     response = await fetch(requestUrl, { signal: controller.signal });
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      throw new Error("Jobs API request timed out before the platform response deadline.");
+    }
+
+    throw new Error("Jobs API request failed before a response was received.");
   } finally {
     clearTimeout(timeoutId);
   }
@@ -113,7 +120,12 @@ async function searchAdzunaJobs({
     throw new Error(`Jobs API request failed with status ${response.status}.`);
   }
 
-  const payload = await response.json();
+  let payload;
+  try {
+    payload = await response.json();
+  } catch (_error) {
+    throw new Error("Jobs API returned unreadable JSON.");
+  }
   const results = Array.isArray(payload.results) ? payload.results : [];
 
   return {
