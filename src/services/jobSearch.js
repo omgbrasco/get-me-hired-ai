@@ -99,7 +99,15 @@ async function searchAdzunaJobs({
   }
 
   const requestUrl = `https://api.adzuna.com/v1/api/jobs/${getAdzunaCountry()}/search/1?${params.toString()}`;
-  const response = await fetch(requestUrl);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  let response;
+  try {
+    response = await fetch(requestUrl, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     throw new Error(`Jobs API request failed with status ${response.status}.`);
@@ -159,7 +167,8 @@ async function searchJobsQuick({ jobTitle, location }) {
       resumeText: "",
       workPreferences: [],
     });
-  } catch (_error) {
+  } catch (error) {
+    console.error("[searchJobsQuick] Adzuna fetch failed:", error && error.message ? error.message : error);
     return {
       provider: DEFAULT_PROVIDER,
       status: "failed",

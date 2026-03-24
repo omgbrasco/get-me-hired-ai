@@ -446,7 +446,8 @@ app.get("/api/search", searchRateLimit, async (req, res) => {
     }
 
     return res.json({ success: true, results });
-  } catch (_error) {
+  } catch (error) {
+    console.error("[/api/search] Unhandled error:", error && error.message ? error.message : error);
     return res.status(500).json({
       success: false,
       message: "Search is unavailable right now. Please try again.",
