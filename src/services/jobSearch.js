@@ -1,6 +1,6 @@
 const DEFAULT_PROVIDER = "adzuna";
 const MAX_RESULTS = 10;
-const ADZUNA_TIMEOUT_MS = 4000;
+const ADZUNA_TIMEOUT_MS = 7000;
 const { rankJobMatches } = require("./jobRanking");
 const { normalizeLocationInput } = require("./location");
 
@@ -112,7 +112,9 @@ async function searchAdzunaJobs({
       throw new Error("Jobs API request timed out before the platform response deadline.");
     }
 
-    throw new Error("Jobs API request failed before a response was received.");
+    const causeCode = error && error.cause && error.cause.code ? error.cause.code : null;
+    const detail = causeCode ? ` [${causeCode}]` : (error && error.message ? ` [${error.message}]` : "");
+    throw new Error(`Jobs API request failed before a response was received.${detail}`);
   } finally {
     clearTimeout(timeoutId);
   }
